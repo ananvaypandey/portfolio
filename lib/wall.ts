@@ -95,4 +95,11 @@ export const wallAlbums: WallAlbum[] = [
     date: "2026",
     images: [],
   },
+  {
+    id: "thrive-2024",
+    name: "Thrive — 2024",
+    tag: "wins",
+    date: "2024",
+    images: [],
+  },
 ];
