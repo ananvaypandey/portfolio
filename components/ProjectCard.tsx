@@ -62,7 +62,11 @@ export default function ProjectCard({ project }: { project: Project }) {
         className={`relative flex h-36 items-center justify-center overflow-hidden border-b-2 border-dashed border-borderish bg-gradient-to-br ${project.gradient}`}
       >
         <div className="bg-grid absolute inset-0 opacity-70 [mask-image:radial-gradient(ellipse_at_center,black_20%,transparent_78%)]" />
-        <span className="relative -rotate-3 font-hand text-7xl font-semibold text-foreground/85 transition-transform duration-500 group-hover:rotate-0 group-hover:text-accent">
+        <span
+          className={`relative -rotate-3 font-hand font-semibold text-foreground/85 transition-transform duration-500 group-hover:rotate-0 group-hover:text-accent ${
+            project.monogram.length > 5 ? "text-4xl sm:text-5xl" : "text-7xl"
+          }`}
+        >
           {project.monogram}
         </span>
       </div>

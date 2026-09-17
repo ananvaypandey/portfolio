@@ -8,12 +8,6 @@ const jobs = [
     period: "Present",
     desc: "Building AI-powered products across MedTech, assistive technology, robotics, software, and embedded systems — working across the full journey from idea and research to prototyping, hardware integration, and product development.",
   },
-  {
-    role: "AI Data Analyst Intern",
-    company: "INAMIGOS Foundation",
-    period: "Internship",
-    desc: "Worked with AI and data-oriented workflows, developing practical experience in data analysis, analytical thinking, and technology-driven problem solving.",
-  },
 ];
 
 export default function Experience() {

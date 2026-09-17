@@ -42,13 +42,10 @@ export default function FeaturedProject() {
               </span>
             </div>
 
-            <h3 className="mt-6 font-hand text-6xl font-semibold tracking-tight text-accent">
-              VIONEX
+            <h3 className="mt-6 font-hand text-5xl font-semibold tracking-tight text-accent sm:text-6xl">
+              VIONEX · Personal Health Companion
             </h3>
-            <p className="font-hand text-3xl text-foreground">
-              Personal Health Companion
-            </p>
-            <p className="mt-1 text-lg text-muted">
+            <p className="font-hand text-2xl text-foreground sm:text-3xl">
               AI × Healthcare × Robotics × Edge Computing
             </p>
 
