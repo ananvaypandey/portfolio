@@ -31,7 +31,7 @@ const disciplines = [
 
 export default function Disciplines() {
   return (
-    <section id="what-i-build" className="relative py-24 sm:py-28">
+    <section id="what-i-build" className="relative py-14 sm:py-28">
       <div className="mx-auto max-w-6xl px-6">
         <SectionHeading
           tag="what I build"

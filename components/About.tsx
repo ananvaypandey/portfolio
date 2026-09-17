@@ -25,7 +25,7 @@ const terminalLines = [
 
 export default function About() {
   return (
-    <section id="about" className="relative py-24 sm:py-28">
+    <section id="about" className="relative py-14 sm:py-28">
       <div
         aria-hidden
         className="pointer-events-none absolute left-[-8%] top-1/3 h-72 w-72 animate-float text-borderish"

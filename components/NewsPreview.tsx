@@ -5,7 +5,7 @@ import { newsArticles } from "@/lib/news";
 
 export default function NewsPreview() {
   return (
-    <section id="news-preview" className="relative py-24 sm:py-28">
+    <section id="news-preview" className="relative py-14 sm:py-28">
       <div className="mx-auto max-w-6xl px-6">
         <SectionHeading
           tag="news"

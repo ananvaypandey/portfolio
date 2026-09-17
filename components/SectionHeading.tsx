@@ -19,12 +19,14 @@ export default function SectionHeading({
         </svg>
         {tag}
       </span>
-      <h2 className="relative inline-block font-hand text-5xl font-semibold tracking-tight sm:text-6xl">
+      <h2 className="relative inline-block font-hand text-4xl font-semibold tracking-tight sm:text-5xl lg:text-6xl">
         {title}
         <PencilLine className="absolute -bottom-2 left-0 h-2.5 w-3/4 text-borderish" />
       </h2>
       {subtitle && (
-        <p className="mt-5 max-w-2xl text-xl text-muted">{subtitle}</p>
+        <p className="mt-5 max-w-2xl text-lg leading-relaxed text-muted sm:text-xl">
+          {subtitle}
+        </p>
       )}
     </Reveal>
   );

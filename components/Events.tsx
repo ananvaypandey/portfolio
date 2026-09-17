@@ -30,7 +30,7 @@ const events = [
 
 export default function Events() {
   return (
-    <section id="events" className="relative py-24 sm:py-28">
+    <section id="events" className="relative py-14 sm:py-28">
       <div className="mx-auto max-w-6xl px-6">
         <SectionHeading
           tag="hackathons & events"

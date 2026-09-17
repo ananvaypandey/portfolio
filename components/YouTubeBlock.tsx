@@ -16,7 +16,7 @@ const channel = {
 
 export default function YouTubeBlock() {
   return (
-    <section id="youtube" className="relative py-24 sm:py-28">
+    <section id="youtube" className="relative py-14 sm:py-28">
       <div
         aria-hidden
         className="pointer-events-none absolute right-0 top-1/4 h-72 w-72 text-borderish"
@@ -37,7 +37,7 @@ export default function YouTubeBlock() {
         />
 
         <Reveal>
-          <div className="card-hover relative flex flex-col items-center gap-8 rounded-3xl border-2 border-dashed border-borderish bg-surface p-8 sm:p-10 lg:flex-row lg:gap-14">
+          <div className="card-hover relative flex flex-col items-center gap-8 rounded-3xl border-2 border-dashed border-borderish bg-surface p-6 sm:p-10 lg:flex-row lg:gap-14">
             <div className="relative shrink-0 -rotate-3 rounded-2xl border-2 border-borderish bg-background p-3 shadow-[0_18px_40px_-18px_rgba(60,50,30,0.4)] transition-transform hover:rotate-0">
               <div className="tape" />
               <Image
@@ -45,7 +45,7 @@ export default function YouTubeBlock() {
                 alt={`${channel.name} channel profile picture`}
                 width={192}
                 height={192}
-                className="h-40 w-40 rounded-xl object-cover sm:h-48 sm:w-48"
+                className="h-32 w-32 rounded-xl object-cover sm:h-48 sm:w-48"
               />
               <p className="mt-3 text-center font-hand text-2xl font-semibold text-muted">
                 @ananvayio
@@ -54,7 +54,7 @@ export default function YouTubeBlock() {
 
             <div className="flex-1 text-center lg:text-left">
               <div className="flex flex-col items-center gap-3 lg:flex-row lg:items-center">
-                <h3 className="font-hand text-5xl font-semibold tracking-tight text-ink-red">
+                <h3 className="font-hand text-4xl font-semibold tracking-tight text-ink-red sm:text-5xl">
                   {channel.name}
                 </h3>
                 <span className="rounded-full border border-dashed border-borderish bg-background px-3 py-1 font-mono text-sm text-faint">
@@ -62,19 +62,19 @@ export default function YouTubeBlock() {
                 </span>
               </div>
 
-              <p className="mt-3 font-hand text-2xl italic text-muted">
+              <p className="mt-3 font-hand text-xl italic text-muted sm:text-2xl">
                 {channel.tagline}
               </p>
-              <p className="mt-4 max-w-xl text-xl leading-relaxed text-foreground/85 lg:mx-0 lg:text-left">
+              <p className="mt-4 max-w-xl text-lg leading-relaxed text-foreground/85 sm:text-xl lg:mx-0 lg:text-left">
                 {channel.description}
               </p>
 
-              <div className="mt-7 flex flex-wrap items-center justify-center gap-4 lg:justify-start">
+              <div className="mt-7 flex w-full flex-col items-stretch gap-4 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-center lg:justify-start">
                 <a
                   href={site.socials.youtube}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 rounded-full bg-ink-red px-7 py-3 font-hand text-xl text-background shadow-[0_10px_30px_-12px_rgba(207,74,51,0.6)] transition-all hover:-translate-y-0.5 hover:rotate-1"
+                  className="inline-flex items-center justify-center gap-2 rounded-full bg-ink-red px-7 py-3 text-center font-hand text-xl text-background shadow-[0_10px_30px_-12px_rgba(207,74,51,0.6)] transition-all hover:-translate-y-0.5 hover:rotate-1"
                 >
                   <svg
                     width="18"
@@ -88,7 +88,7 @@ export default function YouTubeBlock() {
                 </a>
                 <Link
                   href="/contact"
-                  className="inline-flex items-center gap-2 rounded-full border-2 border-borderish bg-background px-7 py-3 font-hand text-xl text-foreground transition-all hover:-translate-y-0.5 hover:-rotate-1 hover:border-accent hover:text-accent"
+                  className="inline-flex items-center justify-center gap-2 rounded-full border-2 border-borderish bg-background px-7 py-3 text-center font-hand text-xl text-foreground transition-all hover:-translate-y-0.5 hover:-rotate-1 hover:border-accent hover:text-accent"
                 >
                   Talk to me
                 </Link>

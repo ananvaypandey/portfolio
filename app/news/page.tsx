@@ -10,7 +10,7 @@ export const metadata = {
 export default function NewsPage() {
   return (
     <>
-      <div className="mx-auto max-w-6xl px-6 pt-24">
+      <div className="mx-auto max-w-6xl px-6 pt-20 sm:pt-24">
         <Link
           href="/"
           className="inline-flex items-center gap-2 font-hand text-xl text-muted transition-colors hover:text-accent"

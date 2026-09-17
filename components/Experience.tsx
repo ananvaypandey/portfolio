@@ -18,7 +18,7 @@ const jobs = [
 
 export default function Experience() {
   return (
-    <section id="experience" className="relative py-24 sm:py-28">
+    <section id="experience" className="relative py-14 sm:py-28">
       <div className="mx-auto max-w-6xl px-6">
         <SectionHeading
           tag="experience"

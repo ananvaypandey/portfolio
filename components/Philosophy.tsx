@@ -9,7 +9,7 @@ const points = [
 
 export default function Philosophy() {
   return (
-    <section id="philosophy" className="relative py-24 sm:py-28">
+    <section id="philosophy" className="relative py-14 sm:py-28">
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 overflow-hidden"

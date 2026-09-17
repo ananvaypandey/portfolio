@@ -56,39 +56,39 @@ export default function Home() {
       <Hero />
       <Disciplines />
 
-      <section id="index" className="py-24 sm:py-28">
+      <section id="index" className="py-14 sm:py-28">
         <div className="mx-auto max-w-4xl px-6">
           <SectionHeading
             tag="contents"
             title="In this notebook"
             subtitle="Every chapter has its own page. Flip to whichever one you need."
           />
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             {index.map((item, i) => (
               <Reveal key={item.href} delay={i * 0.06}>
                 <Link
                   href={item.href}
-                  className="card-hover group flex items-center gap-6 rounded-2xl border-2 border-dashed border-borderish bg-surface px-6 py-5"
+                  className="card-hover group flex items-center gap-4 rounded-2xl border-2 border-dashed border-borderish bg-surface px-5 py-4 sm:gap-6 sm:px-6 sm:py-5"
                 >
-                  <span className="font-hand text-3xl font-semibold text-faint">
+                  <span className="font-hand text-2xl font-semibold text-faint sm:text-3xl">
                     {item.num}
                   </span>
                   <div className="flex-1">
-                    <span className="font-hand text-3xl font-semibold transition-colors group-hover:text-accent">
+                    <span className="font-hand text-2xl font-semibold transition-colors group-hover:text-accent sm:text-3xl">
                       {item.title}
                     </span>
-                    <span className="block text-lg text-muted">{item.note}</span>
+                    <span className="block text-base text-muted sm:text-lg">{item.note}</span>
                   </div>
                   <svg
-                    width="22"
-                    height="22"
+                    width="18"
+                    height="18"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
                     strokeWidth="2"
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    className="text-faint transition-all group-hover:translate-x-1 group-hover:text-accent"
+                    className="text-faint transition-all group-hover:translate-x-1 group-hover:text-accent sm:h-[22px] sm:w-[22px]"
                   >
                     <path d="M5 12h14" />
                     <path d="m12 5 7 7-7 7" />
@@ -100,7 +100,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="blog-preview" className="py-24 sm:py-28">
+      <section id="blog-preview" className="py-14 sm:py-28">
         <div className="mx-auto max-w-6xl px-6">
           <SectionHeading
             tag="writing"
@@ -141,7 +141,7 @@ export default function Home() {
       <NewsPreview />
       <YouTubeBlock />
 
-      <section className="relative py-24 sm:py-28">
+      <section className="relative py-14 sm:py-28">
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 overflow-hidden"

@@ -36,7 +36,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${patrickHand.variable} ${caveat.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="ruled flex min-h-full flex-col bg-background font-sans text-foreground">
+      <body className="ruled flex min-h-full flex-col bg-background font-sans text-foreground pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
         <Navbar />
         <main className="flex-1">{children}</main>
         <Footer />

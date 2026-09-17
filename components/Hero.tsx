@@ -60,7 +60,7 @@ export default function Hero() {
 
       <svg
         aria-hidden
-        className="pointer-events-none absolute -top-10 right-[-6%] h-72 w-72 animate-wiggle text-borderish"
+        className="pointer-events-none absolute -top-10 right-[-6%] hidden h-72 w-72 animate-wiggle text-borderish md:block"
         viewBox="0 0 100 100"
         fill="none"
         stroke="currentColor"
@@ -74,7 +74,7 @@ export default function Hero() {
       </svg>
       <svg
         aria-hidden
-        className="pointer-events-none absolute bottom-24 left-[-4%] h-56 w-56 animate-float text-faint"
+        className="pointer-events-none absolute bottom-24 left-[-4%] hidden h-56 w-56 animate-float text-faint md:block"
         viewBox="0 0 100 100"
         fill="none"
         stroke="currentColor"
@@ -106,7 +106,7 @@ export default function Hero() {
 
         <motion.h1
           variants={itemVariants}
-          className="max-w-4xl font-hand text-6xl font-semibold leading-[1.05] tracking-tight text-foreground sm:text-7xl md:text-8xl"
+          className="max-w-4xl font-hand text-5xl font-semibold leading-[1.05] tracking-tight text-foreground sm:text-7xl md:text-8xl"
         >
           Hi, I&apos;m{" "}
           <span className="relative inline-block text-accent">
@@ -114,31 +114,31 @@ export default function Hero() {
             <PencilLine className="absolute -bottom-2 left-0 h-2.5 w-full text-accent/70 sm:-bottom-3" />
           </span>
           <br />
-          <span className="text-3xl font-normal text-muted sm:text-4xl md:text-5xl">
+          <span className="text-2xl font-normal text-muted sm:text-4xl md:text-5xl">
             I&apos;m a <PencilWriter />
           </span>
         </motion.h1>
 
         <motion.p
           variants={itemVariants}
-          className="mt-8 max-w-2xl text-2xl leading-relaxed text-foreground/80"
+          className="mt-8 max-w-2xl text-xl leading-relaxed text-foreground/80 sm:text-2xl"
         >
           {site.tagline}
         </motion.p>
-        <motion.p variants={itemVariants} className="mt-2 font-hand text-2xl text-muted">
+        <motion.p variants={itemVariants} className="mt-2 font-hand text-xl text-muted sm:text-2xl">
           {site.descriptor}
         </motion.p>
 
-        <motion.div variants={itemVariants} className="mt-10 flex flex-wrap gap-4">
+        <motion.div variants={itemVariants} className="mt-10 flex flex-col gap-4 sm:flex-row sm:flex-wrap">
           <Link
             href="/projects"
-            className="rounded-full border-2 border-foreground bg-foreground px-7 py-3 font-hand text-xl text-background shadow-[0_10px_30px_-12px_rgba(60,50,30,0.5)] transition-all hover:-translate-y-0.5 hover:rotate-1 hover:border-accent hover:bg-accent"
+            className="w-full rounded-full border-2 border-foreground bg-foreground px-7 py-3 text-center font-hand text-xl text-background shadow-[0_10px_30px_-12px_rgba(60,50,30,0.5)] transition-all hover:-translate-y-0.5 hover:rotate-1 hover:border-accent hover:bg-accent sm:w-auto"
           >
             See my work
           </Link>
           <Link
             href="/contact"
-            className="rounded-full border-2 border-borderish bg-surface/60 px-7 py-3 font-hand text-xl text-foreground transition-all hover:-translate-y-0.5 hover:-rotate-1 hover:border-accent hover:text-accent"
+            className="w-full rounded-full border-2 border-borderish bg-surface/60 px-7 py-3 text-center font-hand text-xl text-foreground transition-all hover:-translate-y-0.5 hover:-rotate-1 hover:border-accent hover:text-accent sm:w-auto"
           >
             Let&apos;s talk
           </Link>
@@ -166,7 +166,7 @@ export default function Hero() {
       <Link
         href="/about"
         aria-label="Go to about section"
-        className="absolute bottom-8 left-1/2 -translate-x-1/2 text-faint transition-colors hover:text-accent"
+        className="absolute bottom-24 left-1/2 -translate-x-1/2 text-faint transition-colors hover:text-accent md:bottom-8"
       >
         <motion.div
           animate={{ y: [0, 8, 0], rotate: [0, 3, 0] }}

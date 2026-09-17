@@ -13,7 +13,7 @@ export default function BlogPage() {
   const posts = getAllPosts();
 
   return (
-    <div className="mx-auto max-w-6xl px-6 pb-24 pt-32">
+    <div className="mx-auto max-w-6xl px-6 pb-24 pt-24 sm:pt-32">
       <SectionHeading
         tag="blog"
         title="All posts"

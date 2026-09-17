@@ -25,7 +25,7 @@ export default async function BlogPostPage(
   if (!post) notFound();
 
   return (
-    <article className="mx-auto max-w-3xl px-6 pb-24 pt-32">
+    <article className="mx-auto max-w-3xl px-6 pb-24 pt-24 sm:pt-32">
       <Link
         href="/blog"
         className="mb-8 inline-flex items-center gap-2 text-sm text-muted transition-colors hover:text-accent"

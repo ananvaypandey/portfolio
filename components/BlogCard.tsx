@@ -19,10 +19,10 @@ export default function BlogCard({ post }: { post: Post }) {
         <span className="h-1 w-1 rounded-full bg-faint" />
         <span>{post.readTime}</span>
       </div>
-      <h3 className="mt-3 font-hand text-3xl font-semibold leading-snug tracking-tight transition-colors group-hover:text-accent">
+      <h3 className="mt-3 font-hand text-2xl font-semibold leading-snug tracking-tight transition-colors group-hover:text-accent sm:text-3xl">
         {post.title}
       </h3>
-      <p className="mt-2 line-clamp-3 flex-1 text-lg leading-relaxed text-muted">
+      <p className="mt-2 line-clamp-3 flex-1 text-base leading-relaxed text-muted sm:text-lg">
         {post.excerpt}
       </p>
       <div className="mt-4 flex flex-wrap gap-2">

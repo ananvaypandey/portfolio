@@ -48,7 +48,7 @@ const channels = [
 
 export default function ContactPage() {
   return (
-    <div className="mx-auto max-w-6xl px-6 pb-24 pt-32">
+    <div className="mx-auto max-w-6xl px-6 pb-24 pt-24 sm:pt-32">
       <div className="mb-14">
         <Reveal>
           <span className="mb-4 inline-flex items-center gap-2 rounded-xl border-2 border-dashed border-borderish bg-surface/60 px-3 py-1 font-hand text-lg text-ink-red">

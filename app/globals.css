@@ -129,20 +129,34 @@ body {
 }
 
 .ruled {
-  background-image: linear-gradient(
-      to right,
-      rgba(207, 74, 51, 0.08) 1px,
-      transparent 1px
-    ),
-    repeating-linear-gradient(
+  background-image: repeating-linear-gradient(
       to bottom,
       transparent,
       transparent 32px,
       rgba(60, 55, 45, 0.05) 32px,
       rgba(60, 55, 45, 0.05) 33px
     );
-  background-position: 48px 0, 0 0;
+  background-position: 0 0;
   background-size: 100% 100%, auto;
+}
+
+@media (min-width: 768px) {
+  .ruled {
+    background-image: linear-gradient(
+        to right,
+        rgba(207, 74, 51, 0.08) 1px,
+        transparent 1px
+      ),
+      repeating-linear-gradient(
+        to bottom,
+        transparent,
+        transparent 32px,
+        rgba(60, 55, 45, 0.05) 32px,
+        rgba(60, 55, 45, 0.05) 33px
+      );
+    background-position: 48px 0, 0 0;
+    background-size: 100% 100%, auto;
+  }
 }
 
 .glass {
