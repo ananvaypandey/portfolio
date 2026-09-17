@@ -48,6 +48,12 @@ const index = [
   },
   {
     num: "07",
+    title: "The Pinboard",
+    note: "events, collabs & wins, pinned up",
+    href: "/wall",
+  },
+  {
+    num: "08",
     title: "Contact",
     note: "have an idea? let's talk",
     href: "/contact",

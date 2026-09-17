@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <rect width="400" height="300" fill="#f6f1e3"/>
+  <rect x="16" y="16" width="368" height="268" rx="10" fill="none" stroke="#e0d6bd" stroke-width="2"/>
+  <line x1="34" y1="16" x2="34" y2="284" stroke="#cf4a33" stroke-width="2" opacity="0.5"/>
+  <rect x="24" y="24" width="352" height="252" rx="8" fill="none" stroke="#b9ae94" stroke-width="1.5" stroke-dasharray="8 7"/>
+
+  <g stroke="#211f1a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <path d="M108 216 v-44"/>
+    <path d="M152 216 v-44"/>
+    <path d="M92 216 h76"/>
+    <path d="M100 186 l36-14 32 14"/>
+    <path d="M136 172 v28 M142 172 v28"/>
+  </g>
+  <g stroke="#211f1a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <rect x="244" y="96" width="56" height="56" rx="6" transform="rotate(8 272 124)"/>
+    <rect x="254" y="106" width="36" height="36" rx="4" fill="#fdfaf0" transform="rotate(8 272 124)"/>
+    <path d="M246 170 v14 M252 170 v14 M258 170 v14 M264 170 v14 M270 170 v14 M276 170 v14 M282 170 v14 M288 170 v14 M294 170 v14"/>
+    <path d="M252 84 v-10 M258 84 v-10 M264 84 v-10 M270 84 v-10"/>
+    <circle cx="314" cy="120" r="12"/>
+  </g>
+  <g stroke="#3151c2" stroke-width="3" stroke-linecap="round">
+    <path d="M158 234 q10-16 4-26 M156 230 q8-13 4-22"/>
+  </g>
+  <g stroke="#cf4a33" stroke-width="3" stroke-linecap="round">
+    <path d="M330 208 v12 M324 214 h12"/>
+  </g>
+
+  <text x="200" y="272" text-anchor="middle" font-size="25" fill="#211f1a" transform="rotate(-2 200 272)" font-family="Comic Sans MS, Caveat, cursive" font-weight="bold">ROBOTICS LAB</text>
+</svg>

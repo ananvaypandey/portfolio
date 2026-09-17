@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <rect width="400" height="300" fill="#f6f1e3"/>
+  <rect x="16" y="16" width="368" height="268" rx="10" fill="none" stroke="#e0d6bd" stroke-width="2"/>
+  <line x1="34" y1="16" x2="34" y2="284" stroke="#cf4a33" stroke-width="2" opacity="0.5"/>
+  <rect x="24" y="24" width="352" height="252" rx="8" fill="none" stroke="#b9ae94" stroke-width="1.5" stroke-dasharray="8 7"/>
+
+  <path d="M60 204 h280" stroke="#211f1a" stroke-width="3" stroke-linecap="round"/>
+
+  <g stroke="#211f1a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <path d="M92 204 v16 l150 0 v-16"/>
+    <rect x="116" y="190" width="40" height="16" rx="3" fill="#f6f1e3"/>
+    <path d="M136 188 v-8"/>
+  </g>
+
+  <g stroke="#211f1a" stroke-width="2.5" stroke-linecap="round" fill="none">
+    <path d="M230 132 h-58 v-14 h58 z"/>
+    <path d="M172 118 v-12 h30 v12 m-14 4 v-8 m-2 0 h-6"/>
+  </g>
+
+  <g stroke="#211f1a" stroke-width="3" stroke-linecap="round" fill="none">
+    <path d="M226 204 v-52 q-6-20-24-26"/>
+    <path d="M256 204 v-44 q-6-20-22-26"/>
+  </g>
+
+  <path d="M296 120 l16 16 m0-16 -16 16" stroke="#cf4a33" stroke-width="3" stroke-linecap="round"/>
+  <path d="M74 152 q8-12 0-22" stroke="#3151c2" stroke-width="3" stroke-linecap="round"/>
+
+  <text x="200" y="268" text-anchor="middle" font-size="26" fill="#211f1a" transform="rotate(-2 200 268)" font-family="Comic Sans MS, Caveat, cursive" font-weight="bold">THE BENCH</text>
+</svg>

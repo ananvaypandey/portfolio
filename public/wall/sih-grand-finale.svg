@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 460">
+  <rect width="360" height="460" fill="#f6f1e3"/>
+  <rect x="16" y="16" width="328" height="428" rx="10" fill="none" stroke="#e0d6bd" stroke-width="2"/>
+  <line x1="34" y1="16" x2="34" y2="444" stroke="#cf4a33" stroke-width="2" opacity="0.5"/>
+  <rect x="24" y="24" width="312" height="412" rx="8" fill="none" stroke="#b9ae94" stroke-width="1.5" stroke-dasharray="8 7"/>
+
+  <path d="M62 90 h236" stroke="#211f1a" stroke-width="2" stroke-linecap="round" stroke-dasharray="4 6"/>
+  <g stroke="#cf4a33" stroke-width="3" stroke-linecap="round" fill="none">
+    <path d="M104 92 q2-8-4-10 M256 92 q-2-8 4-10"/>
+  </g>
+  <g fill="#fdfaf0" stroke="#211f1a" stroke-width="3" stroke-linejoin="round">
+    <rect x="88" y="108" width="184" height="74" rx="6"/>
+    <path d="M88 126 h184" stroke-dasharray="6 5"/>
+  </g>
+  <text x="180" y="146" text-anchor="middle" font-size="34" fill="#cf4a33" font-family="Comic Sans MS, Caveat, cursive" font-weight="bold">SIH</text>
+  <text x="180" y="172" text-anchor="middle" font-size="18" fill="#211f1a" font-family="Comic Sans MS, Caveat, cursive">GRAND FINALE</text>
+
+  <g stroke="#211f1a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <path d="M70 330 h220 v60 h-220 z"/>
+    <path d="M106 330 v-26 q0-22 20-22 h28 q20 0 20 22 v26"/>
+    <rect x="120" y="270" width="40" height="14" rx="3" fill="#fdfaf0"/>
+    <path d="M140 268 v-8"/>
+    <path d="M232 330 v-40 q10-26 34-26 q18 0 24 14 v52"/>
+    <circle cx="286" cy="292" r="7" fill="none"/>
+  </g>
+  <g stroke="#211f1a" stroke-width="2.5" stroke-linecap="round">
+    <path d="M70 352 h220"/>
+  </g>
+
+  <g stroke="#e0b93a" stroke-width="3" stroke-linecap="round" fill="none">
+    <path d="M180 100 q-3-22-26-30 q6 14 0 22 q14-4 26 8 z"/>
+    <path d="M180 100 q3-22 26-30 q-6 14 0 22 q-14-4-26 8 z"/>
+  </g>
+  <g stroke="#cf4a33" stroke-width="3" stroke-linecap="round">
+    <path d="M252 216 q8-12-2-22 M248 220 q6-10 0-18"/>
+  </g>
+  <text x="180" y="430" text-anchor="middle" font-size="24" fill="#211f1a" transform="rotate(-2 180 430)" font-family="Comic Sans MS, Caveat, cursive" font-weight="bold">SIH — GRAND FINALE</text>
+</svg>

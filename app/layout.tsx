@@ -3,6 +3,7 @@ import { Caveat, Geist_Mono, Patrick_Hand } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import ApplyFloat from "@/components/ApplyFloat";
 import { site } from "@/lib/site";
 
 const patrickHand = Patrick_Hand({
@@ -40,6 +41,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <Navbar />
         <main className="flex-1">{children}</main>
         <Footer />
+        <ApplyFloat />
       </body>
     </html>
   );

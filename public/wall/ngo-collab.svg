@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 460">
+  <rect width="360" height="460" fill="#f6f1e3"/>
+  <rect x="16" y="16" width="328" height="428" rx="10" fill="none" stroke="#e0d6bd" stroke-width="2"/>
+  <line x1="34" y1="16" x2="34" y2="444" stroke="#cf4a33" stroke-width="2" opacity="0.5"/>
+  <rect x="24" y="24" width="312" height="412" rx="8" fill="none" stroke="#b9ae94" stroke-width="1.5" stroke-dasharray="8 7"/>
+
+  <g stroke="#211f1a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <path d="M92 250 q40-74 88-74 q48 0 88 74"/>
+    <path d="M92 250 q88 58 176 0"/>
+  </g>
+  <path d="M180 210 q12 20 42 30 q-30 10-42 34 q-12-24-42-34 q30-10 42-30 z" fill="#cf4a33" stroke="#cf4a33" stroke-width="2"/>
+
+  <g stroke="#211f1a" stroke-width="3" stroke-linecap="round" fill="none">
+    <path d="M70 250 q-6 18-2 36 M290 250 q6 18 2 36"/>
+  </g>
+
+  <g stroke="#3151c2" stroke-width="3" stroke-linecap="round">
+    <path d="M252 150 v12 M246 156 h12"/>
+    <path d="M108 168 v10 M103 173 h10"/>
+  </g>
+  <g fill="#3151c2" stroke="none">
+    <circle cx="290" cy="180" r="4"/>
+  </g>
+
+  <text x="180" y="392" text-anchor="middle" font-size="26" fill="#211f1a" transform="rotate(-2 180 392)" font-family="Comic Sans MS, Caveat, cursive" font-weight="bold">NGO COLLAB</text>
+  <text x="180" y="424" text-anchor="middle" font-size="16" fill="#5b574b" font-family="Comic Sans MS, Caveat, cursive">an afternoon spent giving back</text>
+</svg>

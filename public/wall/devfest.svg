@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <rect width="400" height="300" fill="#f6f1e3"/>
+  <rect x="16" y="16" width="368" height="268" rx="10" fill="none" stroke="#e0d6bd" stroke-width="2"/>
+  <line x1="34" y1="16" x2="34" y2="284" stroke="#cf4a33" stroke-width="2" opacity="0.5"/>
+  <rect x="24" y="24" width="352" height="252" rx="8" fill="none" stroke="#b9ae94" stroke-width="1.5" stroke-dasharray="8 7"/>
+
+  <path d="M70 214 q130-70 260 0" stroke="#211f1a" stroke-width="3" stroke-linecap="round" fill="none"/>
+  <g stroke="#211f1a" stroke-width="3" stroke-linecap="round" fill="none">
+    <circle cx="200" cy="128" r="10"/>
+    <path d="M200 138 v-22 M192 124 h16"/>
+  </g>
+  <g fill="#fdfaf0" stroke="#211f1a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M200 138 v-44"/>
+    <rect x="176" y="140" width="48" height="22" rx="5"/>
+    <path d="M186 140 v14 M182 144 h8"/>
+  </g>
+  <g stroke="#cf4a33" stroke-width="3" stroke-linecap="round">
+    <path d="M262 208 q-10-16-4-28 M258 204 q8-14 4-24"/>
+  </g>
+  <g stroke="#3151c2" stroke-width="2.5" stroke-linecap="round" fill="none">
+    <circle cx="96" cy="184" r="5"/><circle cx="304" cy="182" r="5"/>
+    <circle cx="90" cy="222" r="4"/><circle cx="312" cy="220" r="4"/>
+  </g>
+
+  <text x="200" y="268" text-anchor="middle" font-size="26" fill="#211f1a" transform="rotate(-1 200 268)" font-family="Comic Sans MS, Caveat, cursive" font-weight="bold">DEV FEST</text>
+</svg>
