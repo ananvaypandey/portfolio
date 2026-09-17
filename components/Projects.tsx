@@ -1,60 +1,8 @@
 import Reveal from "./Reveal";
 import SectionHeading from "./SectionHeading";
 import FeaturedProject from "./FeaturedProject";
-import ProjectCard, { type Project } from "./ProjectCard";
-
-const projects: Project[] = [
-  {
-    title: "VOKA — AI Companion for Mental Well-Being",
-    description:
-      "An AI companion for mental well-being, physical safety, and natural human-AI interaction — combining an interactive avatar with hardware sensing.",
-    tags: ["Raspberry Pi 5", "Unreal Engine", "MetaHuman", "FastAPI", "Firebase", "ESP8266", "MPU6050"],
-    gradient: "from-[#f0ebe0] to-[#e2d6c0]",
-    monogram: "VOKA",
-  },
-  {
-    title: "MYRA — AI Fashion Assistant",
-    description:
-      "An AI personal fashion assistant that understands your profile, wardrobe, and the weather to give personalized outfit advice.",
-    tags: ["React Native", "Expo", "Firebase", "Gemini Vision"],
-    gradient: "from-[#f3ece0] to-[#e7dcc8]",
-    monogram: "MYRA",
-  },
-  {
-    title: "VOXLENS — Smart Glasses with Real-Time Captions",
-    description:
-      "Smart-glasses concept that converts spoken communication into real-time visual text through a small OLED heads-up interface.",
-    tags: ["Speech-to-Text", "Wearables", "Embedded Systems", "HCI"],
-    gradient: "from-[#eef0db] to-[#dce2bd]",
-    monogram: "VOXLENS",
-  },
-  {
-    title: "VOSIGN — Smart Glove for Speech",
-    description:
-      "A smart glove that reads hand gestures with flex sensors and translates movement into speech.",
-    tags: ["Flex Sensors", "Embedded Systems", "Gesture Recognition"],
-    gradient: "from-[#e4ece9] to-[#cbe0d8]",
-    monogram: "VOSIGN",
-  },
-  {
-    title: "VOZO — Offline Peer-to-Peer Messenger",
-    description:
-      "Offline peer-to-peer messaging between nearby Android devices using Google's Nearby Connections API.",
-    tags: ["Android", "Nearby Connections", "P2P Networking"],
-    gradient: "from-[#f6eadc] to-[#ecd6bd]",
-    monogram: "VOZO",
-  },
-  {
-    title: "VOIKES Technologies — Intelligent Products Startup",
-    description:
-      "Technology startup building intelligent products at the intersection of AI, assistive tech, healthcare, robotics, and human interaction.",
-    tags: ["Startup", "MedTech", "AI", "Robotics"],
-    gradient: "from-[#f6efe2] to-[#eddfc7]",
-    monogram: "VOIKES",
-    demo: "https://www.instagram.com/voikes.technologies/",
-    demoLabel: "Company",
-  },
-];
+import ProjectCard from "./ProjectCard";
+import projects from "./projectData";
 
 export default function Projects() {
   return (
