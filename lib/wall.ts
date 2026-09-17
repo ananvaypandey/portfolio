@@ -1,3 +1,5 @@
+import { basePath } from "./site";
+
 export interface WallImage {
   src: string;
   alt: string;
@@ -20,7 +22,43 @@ export const wallAlbums: WallAlbum[] = [
     name: "TechExpo — 2024",
     tag: "wins",
     date: "2024",
-    images: [],
+    images: [
+      {
+        src: `${basePath}/wall/techexpo-2024/1.png`,
+        alt: "Photo 1 — Techexpo 2024",
+        caption: "Photo 1 — TechExpo 2024",
+        width: 771,
+        height: 447,
+      },
+      {
+        src: `${basePath}/wall/techexpo-2024/2.png`,
+        alt: "Photo 2 — Techexpo 2024",
+        caption: "Photo 2 — TechExpo 2024",
+        width: 796,
+        height: 562,
+      },
+      {
+        src: `${basePath}/wall/techexpo-2024/3.png`,
+        alt: "Photo 3 — Techexpo 2024",
+        caption: "Photo 3 — TechExpo 2024",
+        width: 625,
+        height: 392,
+      },
+      {
+        src: `${basePath}/wall/techexpo-2024/4.png`,
+        alt: "Photo 4 — Techexpo 2024",
+        caption: "Photo 4 — TechExpo 2024",
+        width: 760,
+        height: 517,
+      },
+      {
+        src: `${basePath}/wall/techexpo-2024/5.png`,
+        alt: "Photo 5 — Techexpo 2024",
+        caption: "Photo 5 — TechExpo 2024",
+        width: 637,
+        height: 340,
+      },
+    ],
   },
   {
     id: "sih-2025",
