@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <rect width="400" height="300" fill="#f6f1e3"/>
+  <rect x="16" y="16" width="368" height="268" rx="10" fill="none" stroke="#e0d6bd" stroke-width="2"/>
+  <line x1="34" y1="16" x2="34" y2="284" stroke="#cf4a33" stroke-width="2" opacity="0.5"/>
+  <rect x="24" y="24" width="352" height="252" rx="8" fill="none" stroke="#b9ae94" stroke-width="1.5" stroke-dasharray="8 7"/>
+
+  <g stroke="#211f1a" stroke-width="3" stroke-linecap="round" fill="none">
+    <circle cx="180" cy="128" r="18"/><path d="M180 146 v-24 M164 126 h32"/>
+    <path d="M168 146 q12 10 24 0 M168 146 v22 M192 146 v22"/>
+    <path d="M170 168 l6 26 M190 168 l-6 26"/>
+  </g>
+  <g stroke="#cf4a33" stroke-width="3" stroke-linecap="round" fill="none">
+    <path d="M152 168 q-8-10 0-20 M208 168 q8-10 0-20"/>
+  </g>
+  <g stroke="#3151c2" stroke-width="3" stroke-linecap="round" fill="none">
+    <path d="M163 196 h34 q-8-26-34-26 q-26 0-34 26 z"/>
+    <path d="M163 214 h34"/>
+    <circle cx="180" cy="190" r="4" fill="#3151c2" stroke="none"/>
+  </g>
+
+  <path d="M70 232 q130-50 260 0" stroke="#211f1a" stroke-width="3" stroke-linecap="round" fill="none"/>
+  <g stroke="#211f1a" stroke-width="2.5" stroke-linecap="round" fill="none">
+    <path d="M96 96 v-34 M78 62 h36 M96 80 h-20 M96 96 h-20"/>
+  </g>
+  <g stroke="#e0b93a" stroke-width="3" stroke-linecap="round" fill="none">
+    <path d="M300 118 v18 M291 127 h18"/>
+  </g>
+  <g fill="#cf4a33" stroke="none">
+    <circle cx="330" cy="66" r="4"/><circle cx="70" cy="58" r="3.5"/>
+  </g>
+
+  <text x="200" y="272" text-anchor="middle" font-size="24" fill="#211f1a" transform="rotate(-1.5 200 272)" font-family="Comic Sans MS, Caveat, cursive" font-weight="bold">WINNER</text>
+</svg>

@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <rect width="400" height="300" fill="#f6f1e3"/>
+  <rect x="16" y="16" width="368" height="268" rx="10" fill="none" stroke="#e0d6bd" stroke-width="2"/>
+  <line x1="34" y1="16" x2="34" y2="284" stroke="#cf4a33" stroke-width="2" opacity="0.5"/>
+  <rect x="24" y="24" width="352" height="252" rx="8" fill="none" stroke="#b9ae94" stroke-width="1.5" stroke-dasharray="8 7"/>
+
+  <g stroke="#211f1a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <path d="M64 228 h272"/>
+    <path d="M92 228 v-70 h216 v70"/>
+    <path d="M92 196 h216"/>
+  </g>
+  <rect x="128" y="112" width="144" height="54" rx="4" fill="#fdfaf0" stroke="#3151c2" stroke-width="2.5"/>
+  <g stroke="#3151c2" stroke-width="2.5" stroke-linecap="round" fill="none">
+    <path d="M190 136 q14 10 26 22 q-16 6-22 16 q-6-10-22-20 q14-8 18-18 z"/>
+    <path d="M150 150 q12 8 18 18 M268 150 q-12 8-18 18"/>
+  </g>
+  <g stroke="#cf4a33" stroke-width="3" stroke-linecap="round" fill="none">
+    <circle cx="150" cy="88" r="10"/><path d="M150 78 v-8 M142 86 h8"/>
+    <circle cx="250" cy="84" r="10"/><path d="M250 74 v-8 M242 82 h8"/>
+  </g>
+  <g fill="#211f1a" stroke="none">
+    <circle cx="150" cy="88" r="2.5"/>
+    <circle cx="250" cy="84" r="2.5"/>
+  </g>
+
+  <text x="200" y="270" text-anchor="middle" font-size="24" fill="#211f1a" transform="rotate(-2 200 270)" font-family="Comic Sans MS, Caveat, cursive" font-weight="bold">MEETING ROOM</text>
+</svg>

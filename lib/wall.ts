@@ -20,8 +20,8 @@ const img = (
   file: string,
   alt: string,
   caption: string,
-  width: number,
-  height: number
+  width = 400,
+  height = 300
 ): WallImage => ({ src: `${basePath}/wall/${file}`, alt, caption, width, height });
 
 export const wallAlbums: WallAlbum[] = [
@@ -31,27 +31,11 @@ export const wallAlbums: WallAlbum[] = [
     tag: "wins",
     date: "2024",
     images: [
-      img(
-        "tech-expo-2025.svg",
-        "Trophy illustration for TechExpo",
-        "the trophy moment — winner",
-        400,
-        300
-      ),
-      img(
-        "expo-booth.svg",
-        "Expo booth illustration",
-        "our booth, day one",
-        400,
-        300
-      ),
-      img(
-        "devfest.svg",
-        "Stage and crowd illustration at the expo",
-        "crowd around the stages",
-        400,
-        300
-      ),
+      img("award-stage.svg", "Winner on stage illustration", "walked up, arms up — winner"),
+      img("tech-expo-2025.svg", "Trophy illustration for TechExpo", "the trophy moment"),
+      img("expo-booth.svg", "Expo booth illustration", "our booth, day one"),
+      img("devfest.svg", "Stage and crowd illustration at the expo", "crowd around the stages"),
+      img("team-group.svg", "Group of people illustration", "the crew, day two"),
     ],
   },
   {
@@ -60,34 +44,11 @@ export const wallAlbums: WallAlbum[] = [
     tag: "hackathons",
     date: "2025",
     images: [
-      img(
-        "sih-grand-finale.svg",
-        "Hackathon banner illustration for SIH",
-        "waitlisted, then in it — Grand Finale",
-        360,
-        460
-      ),
-      img(
-        "hackathon-night.svg",
-        "Late night coding illustration",
-        "2 AM problem sets",
-        400,
-        300
-      ),
-      img(
-        "team-bench.svg",
-        "Messy desk illustration",
-        "the bench, mid-sprint",
-        400,
-        300
-      ),
-      img(
-        "robotics-lab.svg",
-        "Robot arm illustration in the lab",
-        "hardware held up",
-        400,
-        300
-      ),
+      img("sih-grand-finale.svg", "Hackathon banner illustration for SIH", "waitlisted, then in it — Grand Finale", 360, 460),
+      img("hackathon-night.svg", "Late night coding illustration", "2 AM problem sets"),
+      img("hackathon-submit.svg", "Laptop with submit check illustration", "the submit moment"),
+      img("whiteboard.svg", "Whiteboard with sketches illustration", "sketching the architecture"),
+      img("team-bench.svg", "Messy desk illustration", "the bench, mid-sprint"),
     ],
   },
   {
@@ -96,20 +57,11 @@ export const wallAlbums: WallAlbum[] = [
     tag: "wins",
     date: "2025",
     images: [
-      img(
-        "protech-2025.svg",
-        "Podium and medal illustration for ProTech",
-        "winner, ProTech",
-        400,
-        300
-      ),
-      img(
-        "team-group.svg",
-        "Group of people illustration",
-        "the crew after the podium",
-        400,
-        300
-      ),
+      img("protech-2025.svg", "Podium and medal illustration for ProTech", "winner, ProTech"),
+      img("award-stage.svg", "Winner on stage illustration", "the podium walk"),
+      img("team-group.svg", "Group of people illustration", "the crew after the podium"),
+      img("devfest.svg", "Stage and crowd illustration", "lights up in the hall"),
+      img("studio-day.svg", "Camera on a tripod illustration", "media corner after the win", 360, 460),
     ],
   },
   {
@@ -118,20 +70,11 @@ export const wallAlbums: WallAlbum[] = [
     tag: "collabs",
     date: "2025",
     images: [
-      img(
-        "tcs-visit.svg",
-        "Office building illustration for a TCS visit",
-        "campus tour — TCS",
-        400,
-        300
-      ),
-      img(
-        "team-group.svg",
-        "Group of people illustration",
-        "checking into the tour",
-        400,
-        300
-      ),
+      img("tcs-visit.svg", "Office building illustration for a TCS visit", "campus tour — TCS"),
+      img("tcs-campus.svg", "Campus walk illustration", "sneak peek at the campus"),
+      img("tcs-meeting.svg", "Meeting room illustration", "inside the meeting room"),
+      img("team-group.svg", "Group of people illustration", "checking in for the tour"),
+      img("studio-day.svg", "Camera on a tripod illustration", "capturing the tour", 360, 460),
     ],
   },
   {
@@ -140,41 +83,11 @@ export const wallAlbums: WallAlbum[] = [
     tag: "milestones",
     date: "2026",
     images: [
-      img(
-        "company-birthday.svg",
-        "Birthday cake and balloons illustration",
-        "the cake that keeps the bench alive",
-        400,
-        300
-      ),
-      img(
-        "team-group.svg",
-        "Group of people illustration",
-        "everyone who made it real",
-        400,
-        300
-      ),
-      img(
-        "team-bench.svg",
-        "Messy desk illustration",
-        "back where it started",
-        400,
-        300
-      ),
-      img(
-        "studio-day.svg",
-        "Camera on tripod illustration",
-        "a celebration shoot",
-        360,
-        460
-      ),
-      img(
-        "ngo-collab.svg",
-        "Hands around a heart illustration",
-        "still finding time to give back",
-        360,
-        460
-      ),
+      img("company-birthday.svg", "Birthday cake and balloons illustration", "the cake that keeps the bench alive"),
+      img("party.svg", "Confetti and balloons illustration", "confetti and chaos"),
+      img("team-group.svg", "Group of people illustration", "everyone who made it real"),
+      img("team-bench.svg", "Messy desk illustration", "back where it started"),
+      img("studio-day.svg", "Camera on a tripod illustration", "a celebration shoot", 360, 460),
     ],
   },
 ];
