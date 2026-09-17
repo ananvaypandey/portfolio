@@ -4,23 +4,19 @@ import SectionHeading from "./SectionHeading";
 const events = [
   {
     name: "Smart India Hackathon",
-    desc: "Built VIONEX — a Personal Health Companion combining AI, health monitoring, edge computing, robotics, and caregiver connectivity.",
+    desc: "Started on the waitlist, made it into the Grand Finale. The biggest build season yet — the project stays under wraps until the big day.",
   },
   {
     name: "Smart India Hackathon",
-    desc: "Participated in the SIH ecosystem, working on technology-driven problem solving.",
+    desc: "Participating in SIH 2026 — long hours, hard problems, good people.",
   },
   {
     name: "TechExpo",
-    desc: "Participated in technology and project innovation activities.",
-  },
-  {
-    name: "Thrive",
-    desc: "Participated in technology-focused innovation activities.",
+    desc: "Winner — 2024 and 2025.",
   },
   {
     name: "ProTech",
-    desc: "Participated in technical projects and innovation activities.",
+    desc: "Winner — 2025.",
   },
   {
     name: "DevFest",

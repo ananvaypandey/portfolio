@@ -1,11 +1,7 @@
-export type ChannelInfo = { avatar: string; subscribers?: string };
-
-export async function resolveChannelInfo(
+export async function resolveChannelAvatar(
   handle: string,
-  fallbackAvatar: string
-): Promise<ChannelInfo> {
-  const fallback: ChannelInfo = { avatar: fallbackAvatar };
-
+  fallback: string
+): Promise<string> {
   try {
     const res = await fetch(`https://www.youtube.com/@${handle}/about`, {
       headers: {
@@ -18,22 +14,12 @@ export async function resolveChannelInfo(
     const html = await res.text();
 
     const og = html.match(/<meta property="og:image" content="([^"]+)"/);
-    const avatar = og?.[1] ?? fallbackAvatar;
+    if (og?.[1]) return og[1];
 
-    const subLabel = html.match(
-      /"subscriberCountText":\{"accessibility":\{"accessibilityData":\{"label":"([^"]+)"/
-    );
-    let subscribers: string | undefined;
-    if (subLabel?.[1]) {
-      const raw = subLabel[1]
-        .replace(/\s*subscribers?$/i, "")
-        .replace(/\s+thousand$/i, "K")
-        .replace(/\s+million$/i, "M")
-        .replace(/\s+billion$/i, "B");
-      subscribers = raw;
-    }
+    const avatar = html.match(/"avatar":\{"thumbnails":\[\{"url":"([^"]+)"/);
+    if (avatar?.[1]) return avatar[1];
 
-    return { avatar, subscribers };
+    return fallback;
   } catch {
     return fallback;
   }

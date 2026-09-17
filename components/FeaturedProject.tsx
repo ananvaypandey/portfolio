@@ -37,9 +37,6 @@ export default function FeaturedProject() {
               <span className="rounded-full bg-foreground px-3 py-1 font-mono text-sm text-background">
                 featured
               </span>
-              <span className="rounded-full border border-dashed border-borderish bg-background px-3 py-1 font-mono text-sm text-faint">
-                problem statement · SIH26181
-              </span>
             </div>
 
             <h3 className="mt-6 font-hand text-5xl font-semibold tracking-tight text-accent sm:text-6xl">
@@ -50,11 +47,10 @@ export default function FeaturedProject() {
             </p>
 
             <p className="mt-5 text-xl leading-relaxed text-foreground/85">
-              An AI-powered personal health companion built for the Smart India
-              Hackathon — combining a wearable health band, edge-based AI
-              monitoring, and a robotic assistant into one connected care
-              system. It monitors vitals, supports daily wellness, and keeps
-              caregivers and doctors in the loop.
+              An AI-powered personal health companion that combines a wearable
+              health band, edge-based AI monitoring, and a robotic assistant
+              into one connected care system. It monitors vitals, supports
+              daily wellness, and keeps caregivers and doctors in the loop.
             </p>
 
             <blockquote className="mt-6 border-l-4 border-ink-red bg-background/60 px-5 py-4 font-hand text-2xl italic leading-snug text-foreground/80">
