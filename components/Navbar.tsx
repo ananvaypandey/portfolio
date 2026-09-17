@@ -8,6 +8,7 @@ import { navLinks, site } from "@/lib/site";
 
 const dockItems = [
   { label: "Home", href: "/", icon: "home" },
+  { label: "Shop", href: "/shop", icon: "bag" },
   { label: "Projects", href: "/projects", icon: "bolt" },
   { label: "Blog", href: "/blog", icon: "book" },
   { label: "News", href: "/news", icon: "news" },
@@ -55,6 +56,13 @@ function Icon({ name, className }: { name: string; className?: string }) {
       <>
         <rect x="2" y="4" width="20" height="16" rx="2" />
         <path d="m22 7-10 6L2 7" />
+      </>
+    ),
+    bag: (
+      <>
+        <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
+        <path d="M3 6h18" />
+        <path d="M16 10a4 4 0 0 1-8 0" />
       </>
     ),
     user: (
@@ -245,7 +253,7 @@ export default function Navbar() {
         className="glass fixed inset-x-0 bottom-0 z-50 border-t border-borderish md:hidden"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
-        <div className="mx-auto grid max-w-lg grid-cols-5">
+        <div className="mx-auto grid max-w-xl grid-cols-6">
           {dockItems.map((item) => {
             const active = isActive(item.href);
             return (

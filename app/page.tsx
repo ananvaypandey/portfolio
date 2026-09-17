@@ -42,6 +42,12 @@ const index = [
   },
   {
     num: "06",
+    title: "Shop",
+    note: "products & services",
+    href: "/shop",
+  },
+  {
+    num: "07",
     title: "Contact",
     note: "have an idea? let's talk",
     href: "/contact",
