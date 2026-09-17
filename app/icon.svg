@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <filter id="sketch">
+      <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="3" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.2" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+  </defs>
+
+  <rect width="64" height="64" fill="#f6f1e3" rx="14"/>
+
+  <line x1="5.5" y1="0" x2="5.5" y2="64" stroke="#cf4a33" stroke-width="1.5" opacity="0.3"/>
+
+  <g filter="url(#sketch)" stroke="#cf4a33" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <path d="M21 46 Q28.5 26.5 31 16"/>
+    <path d="M43 46 Q36 26.5 33.5 16"/>
+    <path d="M25 35.5 Q32 38 39.5 34"/>
+  </g>
+</svg>
