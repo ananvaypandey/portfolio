@@ -102,4 +102,18 @@ export const wallAlbums: WallAlbum[] = [
     date: "2024",
     images: [],
   },
+  {
+    id: "innerve-x-hackathon-pune-2026",
+    name: "INNERVE X — Pune, 2026",
+    tag: "hackathons",
+    date: "2026",
+    images: [],
+  },
+  {
+    id: "techexpo-2025",
+    name: "TechExpo — 2025",
+    tag: "wins",
+    date: "2025",
+    images: [],
+  },
 ];
