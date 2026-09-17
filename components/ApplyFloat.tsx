@@ -38,6 +38,11 @@ export default function ApplyFloat() {
   const [dropping, setDropping] = useState(false);
 
   if (!mounted) return null;
+
+  if (dropping && pathname !== "/join" && pathname !== "/join/") {
+    setDropping(false);
+  }
+
   if (pathname === "/join" || pathname === "/join/") return null;
 
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
