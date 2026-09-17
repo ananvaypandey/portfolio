@@ -105,7 +105,7 @@ export default function Navbar() {
   }, []);
 
   const isActive = (href: string) =>
-    href === "/" ? pathname === "/" : pathname === href;
+    pathname === href || pathname === `${href}/`;
 
   return (
     <>
