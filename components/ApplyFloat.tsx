@@ -36,14 +36,20 @@ export default function ApplyFloat() {
   const pathname = usePathname();
   const mounted = useIsHydrated();
   const [dropping, setDropping] = useState(false);
+  const [wasOnJoin, setWasOnJoin] = useState(false);
+  const isJoin = pathname === "/join" || pathname === "/join/";
 
   if (!mounted) return null;
 
-  if (dropping && pathname !== "/join" && pathname !== "/join/") {
-    setDropping(false);
+  if (isJoin) {
+    if (!wasOnJoin) setWasOnJoin(true);
+    return null;
   }
 
-  if (pathname === "/join" || pathname === "/join/") return null;
+  if (wasOnJoin) {
+    setWasOnJoin(false);
+    setDropping(false);
+  }
 
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     if (dropping) {
