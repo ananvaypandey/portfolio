@@ -40,6 +40,7 @@ export default function WallBoard() {
   const album = albumIdx !== null ? wallAlbums[albumIdx] : null;
 
   const openAlbum = (i: number) => {
+    if (wallAlbums[i].images.length === 0) return;
     setAlbumIdx(i);
     setPhoto(0);
   };
@@ -78,8 +79,15 @@ export default function WallBoard() {
               <Reveal key={entry.id} delay={(i % 3) * 0.06}>
                 <button
                   onClick={() => openAlbum(i)}
-                  aria-label={`Open ${entry.name} (${entry.images.length} photos)`}
-                  className={`group relative block w-full text-left transition-transform duration-300 ease-out hover:-translate-y-1 ${rotate}`}
+                  disabled={entry.images.length === 0}
+                  aria-label={
+                    entry.images.length > 0
+                      ? `Open ${entry.name} (${entry.images.length} photos)`
+                      : `${entry.name} — photos coming soon`
+                  }
+                  className={`group relative block w-full text-left transition-transform duration-300 ease-out hover:-translate-y-1 ${rotate} ${
+                    entry.images.length === 0 ? "cursor-default" : ""
+                  }`}
                 >
                   <div className="relative rounded-2xl border-2 border-borderish bg-surface p-2.5 shadow-[0_14px_34px_-16px_rgba(60,50,30,0.45)] transition-colors group-hover:border-accent/50">
                     <span className="absolute -top-3 left-1/2 h-5 w-16 -translate-x-1/2 rotate-[-2deg] rounded-sm bg-[rgba(255,241,190,0.85)] shadow-[0_2px_5px_rgba(60,50,30,0.14)]" />
@@ -87,16 +95,42 @@ export default function WallBoard() {
                       className="absolute right-3 top-3 z-10 h-3.5 w-3.5 rounded-full border-2 border-borderish bg-ink-red shadow-[0_1px_3px_rgba(60,50,30,0.3)]"
                       aria-hidden
                     />
-                    <Image
-                      src={cover.src}
-                      alt={cover.alt}
-                      width={cover.width}
-                      height={cover.height}
-                      className="h-44 w-full rounded-lg border border-dashed border-borderish bg-background object-cover sm:h-52"
-                    />
+                    {cover ? (
+                      <Image
+                        src={cover.src}
+                        alt={cover.alt}
+                        width={cover.width}
+                        height={cover.height}
+                        className="h-44 w-full rounded-lg border border-dashed border-borderish bg-background object-cover sm:h-52"
+                      />
+                    ) : (
+                      <div className="flex h-44 w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-borderish bg-background sm:h-52">
+                        <svg
+                          width="34"
+                          height="34"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.6"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="text-faint"
+                        >
+                          <rect x="3" y="3" width="18" height="18" rx="3" />
+                          <circle cx="9" cy="9" r="2" />
+                          <path d="m21 15-3.09-3.09a2 2 0 0 0-2.82 0L6 21" />
+                        </svg>
+                        <span className="font-hand text-lg text-faint">
+                          photos coming soon
+                        </span>
+                      </div>
+                    )}
                     <span className="absolute bottom-5 right-5 rounded-full bg-background/90 px-2.5 py-0.5 font-mono text-xs text-muted shadow-sm">
-                      {entry.images.length}{" "}
-                      {entry.images.length === 1 ? "photo" : "photos"}
+                      {entry.images.length > 0
+                        ? `${entry.images.length} ${
+                            entry.images.length === 1 ? "photo" : "photos"
+                          }`
+                        : "0 photos"}
                     </span>
                   </div>
 
