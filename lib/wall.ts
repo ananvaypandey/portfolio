@@ -1,95 +1,180 @@
 import { basePath } from "./site";
 
-export interface WallEntry {
-  id: string;
+export interface WallImage {
   src: string;
   alt: string;
   caption: string;
-  tag: string;
-  date: string;
   width: number;
   height: number;
 }
 
-export const wallEntries: WallEntry[] = [
+export interface WallAlbum {
+  id: string;
+  name: string;
+  tag: string;
+  date: string;
+  images: WallImage[];
+}
+
+const img = (
+  file: string,
+  alt: string,
+  caption: string,
+  width: number,
+  height: number
+): WallImage => ({ src: `${basePath}/wall/${file}`, alt, caption, width, height });
+
+export const wallAlbums: WallAlbum[] = [
   {
-    id: "tech-expo-2025",
-    src: `${basePath}/wall/tech-expo-2025.svg`,
-    alt: "Trophy illustration for Tech Expo 2025",
-    caption: "Tech Expo — winner",
+    id: "techexpo-2024",
+    name: "TechExpo — 2024",
     tag: "wins",
-    date: "2025",
-    width: 400,
-    height: 300,
+    date: "2024",
+    images: [
+      img(
+        "tech-expo-2025.svg",
+        "Trophy illustration for TechExpo",
+        "the trophy moment — winner",
+        400,
+        300
+      ),
+      img(
+        "expo-booth.svg",
+        "Expo booth illustration",
+        "our booth, day one",
+        400,
+        300
+      ),
+      img(
+        "devfest.svg",
+        "Stage and crowd illustration at the expo",
+        "crowd around the stages",
+        400,
+        300
+      ),
+    ],
   },
   {
-    id: "sih-grand-finale",
-    src: `${basePath}/wall/sih-grand-finale.svg`,
-    alt: "Illustration of a hackathon banner for SIH Grand Finale",
-    caption: "SIH Grand Finale — waitlisted, then in it",
+    id: "sih-2025",
+    name: "SIH — 2025",
     tag: "hackathons",
-    date: "2026",
-    width: 360,
-    height: 460,
+    date: "2025",
+    images: [
+      img(
+        "sih-grand-finale.svg",
+        "Hackathon banner illustration for SIH",
+        "waitlisted, then in it — Grand Finale",
+        360,
+        460
+      ),
+      img(
+        "hackathon-night.svg",
+        "Late night coding illustration",
+        "2 AM problem sets",
+        400,
+        300
+      ),
+      img(
+        "team-bench.svg",
+        "Messy desk illustration",
+        "the bench, mid-sprint",
+        400,
+        300
+      ),
+      img(
+        "robotics-lab.svg",
+        "Robot arm illustration in the lab",
+        "hardware held up",
+        400,
+        300
+      ),
+    ],
   },
   {
     id: "protech-2025",
-    src: `${basePath}/wall/protech-2025.svg`,
-    alt: "Podium and medal illustration for ProTech 2025",
-    caption: "ProTech — winner",
+    name: "ProTech — 2025",
     tag: "wins",
     date: "2025",
-    width: 400,
-    height: 300,
+    images: [
+      img(
+        "protech-2025.svg",
+        "Podium and medal illustration for ProTech",
+        "winner, ProTech",
+        400,
+        300
+      ),
+      img(
+        "team-group.svg",
+        "Group of people illustration",
+        "the crew after the podium",
+        400,
+        300
+      ),
+    ],
   },
   {
-    id: "ngo-collab",
-    src: `${basePath}/wall/ngo-collab.svg`,
-    alt: "Hands around a heart illustration for an NGO collaboration",
-    caption: "An afternoon with an NGO",
+    id: "tcs-visit-2025",
+    name: "TCS visit — 2025",
     tag: "collabs",
-    date: "2026",
-    width: 360,
-    height: 460,
-  },
-  {
-    id: "studio-day",
-    src: `${basePath}/wall/studio-day.svg`,
-    alt: "Camera on a tripod illustration for studio day",
-    caption: "Studio day — shooting on ANANVAY IO",
-    tag: "youtube",
-    date: "2026",
-    width: 360,
-    height: 460,
-  },
-  {
-    id: "devfest",
-    src: `${basePath}/wall/devfest.svg`,
-    alt: "Stage and laptop illustration for DevFest",
-    caption: "DevFest — the developer ecosystem beat",
-    tag: "events",
     date: "2025",
-    width: 400,
-    height: 300,
+    images: [
+      img(
+        "tcs-visit.svg",
+        "Office building illustration for a TCS visit",
+        "campus tour — TCS",
+        400,
+        300
+      ),
+      img(
+        "team-group.svg",
+        "Group of people illustration",
+        "checking into the tour",
+        400,
+        300
+      ),
+    ],
   },
   {
-    id: "robotics-lab",
-    src: `${basePath}/wall/robotics-lab.svg`,
-    alt: "Robot arm with a chip illustration in the lab",
-    caption: "Robotics lab — gearing up",
-    tag: "builds",
+    id: "company-birthday-2026",
+    name: "Company birthday — 2026",
+    tag: "milestones",
     date: "2026",
-    width: 400,
-    height: 300,
-  },
-  {
-    id: "team-bench",
-    src: `${basePath}/wall/team-bench.svg`,
-    alt: "Messy desk illustration",
-    caption: "The bench — where it happens",
-    tag: "behind the scenes",
-    date: "2026",
-    width: 400,
-    height: 300,
+    images: [
+      img(
+        "company-birthday.svg",
+        "Birthday cake and balloons illustration",
+        "the cake that keeps the bench alive",
+        400,
+        300
+      ),
+      img(
+        "team-group.svg",
+        "Group of people illustration",
+        "everyone who made it real",
+        400,
+        300
+      ),
+      img(
+        "team-bench.svg",
+        "Messy desk illustration",
+        "back where it started",
+        400,
+        300
+      ),
+      img(
+        "studio-day.svg",
+        "Camera on tripod illustration",
+        "a celebration shoot",
+        360,
+        460
+      ),
+      img(
+        "ngo-collab.svg",
+        "Hands around a heart illustration",
+        "still finding time to give back",
+        360,
+        460
+      ),
+    ],
   },
 ];

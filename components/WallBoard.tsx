@@ -5,7 +5,7 @@ import Image from "next/image";
 import { AnimatePresence, motion, type Variants } from "motion/react";
 import Reveal from "./Reveal";
 import SectionHeading from "./SectionHeading";
-import { wallEntries } from "@/lib/wall";
+import { wallAlbums } from "@/lib/wall";
 import { site } from "@/lib/site";
 
 const tapeReveal: Variants = {
@@ -34,18 +34,23 @@ const paperReveal: Variants = {
 };
 
 export default function WallBoard() {
-  const [active, setActive] = useState<number | null>(null);
+  const [albumIdx, setAlbumIdx] = useState<number | null>(null);
+  const [photo, setPhoto] = useState(0);
+
+  const album = albumIdx !== null ? wallAlbums[albumIdx] : null;
+
+  const openAlbum = (i: number) => {
+    setAlbumIdx(i);
+    setPhoto(0);
+  };
 
   useEffect(() => {
-    if (active === null) return;
+    if (albumIdx === null) return;
+    const count = wallAlbums[albumIdx].images.length;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setActive(null);
-      if (e.key === "ArrowRight")
-        setActive((a) => (a === null ? a : (a + 1) % wallEntries.length));
-      if (e.key === "ArrowLeft")
-        setActive((a) =>
-          a === null ? a : (a - 1 + wallEntries.length) % wallEntries.length
-        );
+      if (e.key === "Escape") setAlbumIdx(null);
+      if (e.key === "ArrowRight") setPhoto((p) => (p + 1) % count);
+      if (e.key === "ArrowLeft") setPhoto((p) => (p - 1 + count) % count);
     };
     document.addEventListener("keydown", onKey);
     document.body.style.overflow = "hidden";
@@ -53,7 +58,7 @@ export default function WallBoard() {
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = "";
     };
-  }, [active]);
+  }, [albumIdx]);
 
   return (
     <section id="wall" className="relative py-14 sm:py-28">
@@ -61,54 +66,57 @@ export default function WallBoard() {
         <SectionHeading
           tag="the pinboard"
           title="The Pinboard"
-          subtitle="Events, collabs, wins and the places the notebook went — pinned up as they happen."
+          subtitle="Events, collabs, wins and milestones — pinned up as they happen. Tap an album for the photos."
         />
 
-        <div className="columns-1 gap-5 sm:columns-2 lg:columns-3">
-          {wallEntries.map((entry, i) => (
-            <Reveal
-              key={entry.id}
-              delay={(i % 3) * 0.06}
-              className="mb-5 break-inside-avoid"
-            >
-              <button
-                onClick={() => setActive(i)}
-                aria-label={`View ${entry.caption}`}
-                className={`group relative block w-full text-left transition-transform duration-300 ease-out hover:-translate-y-1 ${
-                  i % 2 === 0 ? "-rotate-1 hover:rotate-0" : "rotate-1 hover:rotate-0"
-                }`}
-              >
-                <div className="relative rounded-2xl border-2 border-borderish bg-surface p-2.5 shadow-[0_14px_34px_-16px_rgba(60,50,30,0.45)] transition-colors group-hover:border-accent/50">
-                  <span className="absolute -top-3 left-1/2 h-5 w-16 -translate-x-1/2 rotate-[-2deg] rounded-sm bg-[rgba(255,241,190,0.85)] shadow-[0_2px_5px_rgba(60,50,30,0.14)]" />
-                  <span
-                    className="absolute right-3 top-3 h-3.5 w-3.5 rounded-full border-2 border-borderish bg-ink-red shadow-[0_1px_3px_rgba(60,50,30,0.3)]"
-                    aria-hidden
-                  />
-                  <Image
-                    src={entry.src}
-                    alt={entry.alt}
-                    width={entry.width}
-                    height={entry.height}
-                    className="h-auto w-full rounded-lg border border-dashed border-borderish bg-background"
-                  />
-                </div>
-
-                <div className="mt-2.5 px-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="rounded-full bg-foreground px-2.5 py-0.5 font-mono text-xs text-background">
-                      {entry.tag}
-                    </span>
-                    <span className="font-mono text-xs text-faint">
-                      {entry.date}
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {wallAlbums.map((entry, i) => {
+            const cover = entry.images[0];
+            const rotate =
+              i % 2 === 0 ? "-rotate-1 hover:rotate-0" : "rotate-1 hover:rotate-0";
+            return (
+              <Reveal key={entry.id} delay={(i % 3) * 0.06}>
+                <button
+                  onClick={() => openAlbum(i)}
+                  aria-label={`Open ${entry.name} (${entry.images.length} photos)`}
+                  className={`group relative block w-full text-left transition-transform duration-300 ease-out hover:-translate-y-1 ${rotate}`}
+                >
+                  <div className="relative rounded-2xl border-2 border-borderish bg-surface p-2.5 shadow-[0_14px_34px_-16px_rgba(60,50,30,0.45)] transition-colors group-hover:border-accent/50">
+                    <span className="absolute -top-3 left-1/2 h-5 w-16 -translate-x-1/2 rotate-[-2deg] rounded-sm bg-[rgba(255,241,190,0.85)] shadow-[0_2px_5px_rgba(60,50,30,0.14)]" />
+                    <span
+                      className="absolute right-3 top-3 z-10 h-3.5 w-3.5 rounded-full border-2 border-borderish bg-ink-red shadow-[0_1px_3px_rgba(60,50,30,0.3)]"
+                      aria-hidden
+                    />
+                    <Image
+                      src={cover.src}
+                      alt={cover.alt}
+                      width={cover.width}
+                      height={cover.height}
+                      className="h-44 w-full rounded-lg border border-dashed border-borderish bg-background object-cover sm:h-52"
+                    />
+                    <span className="absolute bottom-5 right-5 rounded-full bg-background/90 px-2.5 py-0.5 font-mono text-xs text-muted shadow-sm">
+                      {entry.images.length}{" "}
+                      {entry.images.length === 1 ? "photo" : "photos"}
                     </span>
                   </div>
-                  <p className="mt-1.5 font-hand text-xl font-semibold leading-snug text-foreground">
-                    {entry.caption}
-                  </p>
-                </div>
-              </button>
-            </Reveal>
-          ))}
+
+                  <div className="mt-2.5 px-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded-full bg-foreground px-2.5 py-0.5 font-mono text-xs text-background">
+                        {entry.tag}
+                      </span>
+                      <span className="font-mono text-xs text-faint">
+                        {entry.date}
+                      </span>
+                    </div>
+                    <p className="mt-1.5 font-hand text-xl font-semibold leading-snug text-foreground">
+                      {entry.name}
+                    </p>
+                  </div>
+                </button>
+              </Reveal>
+            );
+          })}
         </div>
 
         <Reveal className="mt-14 text-center">
@@ -141,12 +149,12 @@ export default function WallBoard() {
       </div>
 
       <AnimatePresence>
-        {active !== null && (
+        {album && (
           <div
             className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-8"
             role="dialog"
             aria-modal="true"
-            aria-label={`${wallEntries[active].caption} — enlarged`}
+            aria-label={`${album.name} — photos`}
           >
             <motion.div
               className="absolute inset-0 bg-foreground/45 backdrop-blur-sm"
@@ -154,7 +162,7 @@ export default function WallBoard() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.3 }}
-              onClick={() => setActive(null)}
+              onClick={() => setAlbumIdx(null)}
             />
 
             <motion.div
@@ -171,8 +179,8 @@ export default function WallBoard() {
               />
 
               <button
-                onClick={() => setActive(null)}
-                aria-label="Close photo"
+                onClick={() => setAlbumIdx(null)}
+                aria-label="Close photo album"
                 className="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full border-2 border-dashed border-ink-red/60 bg-surface font-mono text-xl text-ink-red transition-colors hover:bg-ink-red hover:text-background"
               >
                 ×
@@ -180,10 +188,7 @@ export default function WallBoard() {
 
               <button
                 onClick={() =>
-                  setActive(
-                    () =>
-                      (active - 1 + wallEntries.length) % wallEntries.length
-                  )
+                  setPhoto((p) => (p - 1 + album.images.length) % album.images.length)
                 }
                 aria-label="Previous photo"
                 className="absolute left-3 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border-2 border-dashed border-borderish bg-surface text-foreground transition-all hover:border-accent hover:text-accent sm:left-5"
@@ -193,7 +198,9 @@ export default function WallBoard() {
                 </svg>
               </button>
               <button
-                onClick={() => setActive(() => (active + 1) % wallEntries.length)}
+                onClick={() =>
+                  setPhoto((p) => (p + 1) % album.images.length)
+                }
                 aria-label="Next photo"
                 className="absolute right-3 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border-2 border-dashed border-borderish bg-surface text-foreground transition-all hover:border-accent hover:text-accent sm:right-5"
               >
@@ -202,24 +209,51 @@ export default function WallBoard() {
                 </svg>
               </button>
 
-              <Image
-                src={wallEntries[active].src}
-                alt={wallEntries[active].alt}
-                width={wallEntries[active].width}
-                height={wallEntries[active].height}
-                className="h-auto w-full rounded-2xl border-2 border-dashed border-borderish bg-background"
-              />
+              {album.images[photo] && (
+                <Image
+                  src={album.images[photo].src}
+                  alt={album.images[photo].alt}
+                  width={album.images[photo].width}
+                  height={album.images[photo].height}
+                  className="h-auto w-full rounded-2xl border-2 border-dashed border-borderish bg-background"
+                />
+              )}
+
               <div className="mt-4 flex flex-wrap items-center gap-2.5 px-1">
                 <span className="rounded-full bg-foreground px-3 py-0.5 font-mono text-sm text-background">
-                  {wallEntries[active].tag}
+                  {photo + 1} / {album.images.length}
+                </span>
+                <span className="rounded-full border border-dashed border-borderish bg-background px-3 py-0.5 font-mono text-sm text-faint">
+                  {album.tag}
                 </span>
                 <span className="font-mono text-sm text-faint">
-                  {wallEntries[active].date}
+                  {album.date}
                 </span>
                 <p className="w-full font-hand text-2xl font-semibold leading-snug text-foreground sm:w-auto">
-                  {wallEntries[active].caption}
+                  {album.images[photo]?.caption}
                 </p>
               </div>
+
+              {album.images.length > 1 && (
+                <div className="mt-4 flex flex-wrap items-center justify-center gap-2 px-1">
+                  {album.images.map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setPhoto(i)}
+                      aria-label={`Go to photo ${i + 1}`}
+                      className={`h-2 rounded-full transition-all ${
+                        i === photo
+                          ? "w-6 bg-accent"
+                          : "w-2 bg-borderish hover:bg-faint"
+                      }`}
+                    />
+                  ))}
+                </div>
+              )}
+
+              <p className="mt-4 text-center font-hand text-2xl font-semibold text-foreground">
+                {album.name}
+              </p>
             </motion.div>
           </div>
         )}

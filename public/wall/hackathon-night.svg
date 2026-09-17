@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <rect width="400" height="300" fill="#f6f1e3"/>
+  <rect x="16" y="16" width="368" height="268" rx="10" fill="none" stroke="#e0d6bd" stroke-width="2"/>
+  <line x1="34" y1="16" x2="34" y2="284" stroke="#cf4a33" stroke-width="2" opacity="0.5"/>
+  <rect x="24" y="24" width="352" height="252" rx="8" fill="none" stroke="#b9ae94" stroke-width="1.5" stroke-dasharray="8 7"/>
+
+  <g stroke="#211f1a" stroke-width="3" stroke-linecap="round" fill="none">
+    <path d="M96 224 h208"/>
+    <path d="M116 224 v-58 q0-26 24-26 h-48 q0 26 24 26 v58"/>
+    <rect x="120" y="196" width="44" height="14" rx="3" fill="#f6f1e3"/>
+    <path d="M142 194 v-8"/>
+    <path d="M238 224 v-52 q-8-20-24-24 M262 224 v-46 q-6-18-20-22"/>
+  </g>
+  <g stroke="#211f1a" stroke-width="2.5" stroke-linecap="round">
+    <path d="M120 144 q34-16 72-4 M128 154 q30-10 64-2"/>
+  </g>
+
+  <g stroke="#3151c2" stroke-width="3" stroke-linecap="round" fill="none">
+    <circle cx="330" cy="58" r="14"/>
+    <path d="M330 40 v14 M316 54 h14"/>
+    <path d="M330 70 v10 M320 66 h20" stroke="#5b574b" stroke-width="2"/>
+    <path d="M318 92 q6-10-2-18" stroke="#cf4a33"/>
+  </g>
+  <text x="330" y="120" text-anchor="middle" font-size="16" fill="#211f1a" font-family="Comic Sans MS, Caveat, cursive">2:14 AM</text>
+
+  <path d="M76 74 q0-10 10-10 q10 0 10 10" stroke="#211f1a" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+  <g fill="#211f1a" stroke="none">
+    <circle cx="86" cy="86" r="3"/>
+    <rect x="92" y="78" width="5" height="4" transform="rotate(20 94 80)"/>
+    <rect x="78" y="80" width="5" height="4" transform="rotate(-20 80 82)"/>
+  </g>
+
+  <text x="200" y="272" text-anchor="middle" font-size="25" fill="#211f1a" transform="rotate(-2 200 272)" font-family="Comic Sans MS, Caveat, cursive" font-weight="bold">LATE NIGHT CODE</text>
+</svg>
