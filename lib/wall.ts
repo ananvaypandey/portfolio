@@ -79,7 +79,29 @@ export const wallAlbums: WallAlbum[] = [
     name: "TCS visit — 2025",
     tag: "collabs",
     date: "2025",
-    images: [],
+    images: [
+      {
+        src: `${basePath}/wall/tcs-visit-2025/1.png`,
+        alt: "Photo 1 — TCS visit 2025",
+        caption: "Photo 1 — TCS visit 2025",
+        width: 771,
+        height: 482,
+      },
+      {
+        src: `${basePath}/wall/tcs-visit-2025/2.png`,
+        alt: "Photo 2 — TCS visit 2025",
+        caption: "Photo 2 — TCS visit 2025",
+        width: 772,
+        height: 507,
+      },
+      {
+        src: `${basePath}/wall/tcs-visit-2025/3.png`,
+        alt: "Photo 3 — TCS visit 2025",
+        caption: "Photo 3 — TCS visit 2025",
+        width: 775,
+        height: 512,
+      },
+    ],
   },
   {
     id: "company-birthday-2026",
@@ -100,7 +122,36 @@ export const wallAlbums: WallAlbum[] = [
     name: "Thrive — 2024",
     tag: "wins",
     date: "2024",
-    images: [],
+    images: [
+      {
+        src: `${basePath}/wall/thrive-2024/1.png`,
+        alt: "Photo 1 — Thrive 2024",
+        caption: "Photo 1 — Thrive 2024",
+        width: 762,
+        height: 552,
+      },
+      {
+        src: `${basePath}/wall/thrive-2024/2.png`,
+        alt: "Photo 2 — Thrive 2024",
+        caption: "Photo 2 — Thrive 2024",
+        width: 575,
+        height: 550,
+      },
+      {
+        src: `${basePath}/wall/thrive-2024/3.png`,
+        alt: "Photo 3 — Thrive 2024",
+        caption: "Photo 3 — Thrive 2024",
+        width: 760,
+        height: 563,
+      },
+      {
+        src: `${basePath}/wall/thrive-2024/4.png`,
+        alt: "Photo 4 — Thrive 2024",
+        caption: "Photo 4 — Thrive 2024",
+        width: 580,
+        height: 663,
+      },
+    ],
   },
   {
     id: "innerve-x-hackathon-pune-2026",
