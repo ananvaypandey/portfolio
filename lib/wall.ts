@@ -180,7 +180,36 @@ export const wallAlbums: WallAlbum[] = [
     name: "INNERVE X — Pune, 2026",
     tag: "hackathons",
     date: "2026",
-    images: [],
+    images: [
+      {
+        src: `${basePath}/wall/innerve-x-hackathon-pune-2026/1.png`,
+        alt: "Photo 1 — INNERVE X hackathon",
+        caption: "Photo 1 — INNERVE X",
+        width: 792,
+        height: 497,
+      },
+      {
+        src: `${basePath}/wall/innerve-x-hackathon-pune-2026/2.png`,
+        alt: "Photo 2 — INNERVE X hackathon",
+        caption: "Photo 2 — INNERVE X",
+        width: 782,
+        height: 573,
+      },
+      {
+        src: `${basePath}/wall/innerve-x-hackathon-pune-2026/3.png`,
+        alt: "Photo 3 — INNERVE X hackathon",
+        caption: "Photo 3 — INNERVE X",
+        width: 755,
+        height: 485,
+      },
+      {
+        src: `${basePath}/wall/innerve-x-hackathon-pune-2026/4.png`,
+        alt: "Photo 4 — INNERVE X hackathon",
+        caption: "Photo 4 — INNERVE X",
+        width: 735,
+        height: 460,
+      },
+    ],
   },
   {
     id: "techexpo-2025",
