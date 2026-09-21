@@ -5,6 +5,7 @@ import Link from "next/link";
 import { AnimatePresence, motion, type Variants } from "motion/react";
 
 export interface Project {
+  slug: string;
   title: string;
   description: string;
   what: string;
@@ -179,25 +180,47 @@ export default function ProjectCard({ project }: { project: Project }) {
               </Link>
             )}
           </div>
-          <button
-            onClick={() => setOpen(true)}
-            className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full border-2 border-dashed border-accent/50 bg-accent/10 px-5 py-2.5 font-hand text-lg text-accent transition-all hover:-translate-y-0.5 hover:bg-accent/15"
-          >
-            Open the dossier
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+          <div className="mt-4 flex flex-col gap-2">
+            <Link
+              href={`/projects/${project.slug}`}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-full border-2 border-foreground bg-foreground px-5 py-2.5 font-hand text-lg text-background shadow-[0_8px_20px_-10px_rgba(60,50,30,0.5)] transition-all hover:-translate-y-0.5 hover:border-accent hover:bg-accent"
             >
-              <path d="M12 5v14" />
-              <path d="m19 12-7 7-7-7" />
-            </svg>
-          </button>
+              View the build
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M12 3v9" />
+                <path d="m16 14-4 4-4-4" />
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+              </svg>
+            </Link>
+            <button
+              onClick={() => setOpen(true)}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-full border-2 border-dashed border-accent/50 bg-accent/10 px-5 py-2.5 font-hand text-lg text-accent transition-all hover:-translate-y-0.5 hover:bg-accent/15"
+            >
+              Open the dossier
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M12 5v14" />
+                <path d="m19 12-7 7-7-7" />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
 

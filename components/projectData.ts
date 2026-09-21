@@ -1,4 +1,5 @@
 export interface Project {
+  slug: string;
   title: string;
   description: string;
   what: string;
@@ -13,6 +14,7 @@ export interface Project {
 
 const projectsData: Project[] = [
   {
+    slug: "voka",
     title: "VOKA — AI Companion for Mental Well-Being",
     description:
       "An AI companion for mental well-being, physical safety, and natural human-AI interaction — combining an interactive avatar with hardware sensing.",
@@ -21,8 +23,10 @@ const projectsData: Project[] = [
     tags: ["Raspberry Pi 5", "Unreal Engine", "MetaHuman", "FastAPI", "Firebase", "ESP8266", "MPU6050"],
     gradient: "from-[#f0ebe0] to-[#e2d6c0]",
     monogram: "VOKA",
+    source: "https://github.com/ananvaypandey/VOKA",
   },
   {
+    slug: "voxlens",
     title: "VOXLENS — Smart Glasses with Real-Time Captions",
     description:
       "Smart-glasses concept that converts spoken communication into real-time visual text through a small OLED heads-up interface.",
@@ -31,8 +35,10 @@ const projectsData: Project[] = [
     tags: ["Speech-to-Text", "Wearables", "Embedded Systems", "HCI"],
     gradient: "from-[#eef0db] to-[#dce2bd]",
     monogram: "VOXLENS",
+    source: "https://github.com/ananvaypandey/VOXLENS",
   },
   {
+    slug: "vosign",
     title: "VOSIGN — Smart Glove for Speech",
     description:
       "A smart glove that reads hand gestures with flex sensors and translates movement into speech.",
@@ -43,6 +49,7 @@ const projectsData: Project[] = [
     monogram: "VOSIGN",
   },
   {
+    slug: "vozo",
     title: "VOZO — Offline Peer-to-Peer Messenger",
     description:
       "Offline peer-to-peer messaging between nearby Android devices using Google's Nearby Connections API.",
@@ -51,6 +58,7 @@ const projectsData: Project[] = [
     tags: ["Android", "Nearby Connections", "P2P Networking"],
     gradient: "from-[#f6eadc] to-[#ecd6bd]",
     monogram: "VOZO",
+    source: "https://github.com/ananvaypandey/VOZO",
   },
 ];
 

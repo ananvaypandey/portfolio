@@ -23,9 +23,19 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://ananvaypandey.github.io/portfolio"),
   title: `${site.name} — ${site.role}`,
   description: site.tagline,
   openGraph: {
+    title: `${site.name} — ${site.role}`,
+    description: site.tagline,
+    url: "/",
+    siteName: site.name,
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
     title: `${site.name} — ${site.role}`,
     description: site.tagline,
   },
