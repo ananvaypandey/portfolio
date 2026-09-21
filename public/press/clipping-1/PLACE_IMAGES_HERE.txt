@@ -1,0 +1,1 @@
+Drop scanned newspaper clippings here (any .jpg/.png/.webp) — captions live in lib/press.ts. See the projects flow for how this works.

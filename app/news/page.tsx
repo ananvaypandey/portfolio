@@ -1,5 +1,8 @@
 import Link from "next/link";
 import News from "@/components/News";
+import PressClippings from "@/components/PressClippings";
+import { pressClips } from "@/lib/press";
+import { findPressImages } from "@/lib/pressImages";
 
 export const metadata = {
   title: "News — Ananvay Pandey",
@@ -8,6 +11,12 @@ export const metadata = {
 };
 
 export default function NewsPage() {
+  const rows = pressClips.map((clip) => ({
+    slug: clip.slug,
+    images: findPressImages(clip.slug),
+    title: clip.publication ?? `clipping · ${clip.slug}`,
+  }));
+
   return (
     <>
       <div className="mx-auto max-w-6xl px-6 pt-20 sm:pt-24">
@@ -32,6 +41,7 @@ export default function NewsPage() {
         </Link>
       </div>
       <News />
+      <PressClippings rows={rows} />
     </>
   );
 }
