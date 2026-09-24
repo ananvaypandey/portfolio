@@ -58,6 +58,7 @@ interface Particle {
 }
 
 const LANE_X = [-3, 0, 3];
+const LANE_BOUNDS = [-1.5, 1.5];
 const PLAYER_HALF = 0.65;
 const OB_DEPTH = 0.9;
 const GRAVITY = 58;
@@ -235,7 +236,7 @@ function buildGame(
     transparent: true,
     opacity: 0.08,
   });
-  for (const x of LANE_X) {
+  for (const x of LANE_BOUNDS) {
     const line = new THREE.Mesh(
       new THREE.PlaneGeometry(0.05, 320),
       laneLineMat
