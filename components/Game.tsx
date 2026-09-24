@@ -119,7 +119,7 @@ function buildGame(
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.22;
+  renderer.toneMappingExposure = 1.16;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.domElement.style.display = "block";
   host.appendChild(renderer.domElement);
@@ -182,25 +182,27 @@ function buildGame(
   glow.position.set(0, 3, 2);
   scene.add(glow);
 
-  const renderTarget = new THREE.WebGLRenderTarget(
-    host.clientWidth,
-    host.clientHeight,
-    { samples: 4 }
-  );
-  const composer = new EffectComposer(renderer, renderTarget);
-  composer.addPass(new RenderPass(scene, camera));
-  const bloom = new UnrealBloomPass(
-    new THREE.Vector2(host.clientWidth, host.clientHeight),
-    0.45,
-    0.55,
-    0.82
-  );
-  composer.addPass(bloom);
-  composer.addPass(new OutputPass());
-  const vignette = new ShaderPass(VignetteShader);
-  vignette.uniforms["offset"].value = 0.55;
-  vignette.uniforms["darkness"].value = 0.42;
-  composer.addPass(vignette);
+  let composer: EffectComposer | null = null;
+  let bloom: UnrealBloomPass | null = null;
+  try {
+    composer = new EffectComposer(renderer);
+    composer.addPass(new RenderPass(scene, camera));
+    bloom = new UnrealBloomPass(
+      new THREE.Vector2(host.clientWidth, host.clientHeight),
+      0.3,
+      0.55,
+      0.92
+    );
+    composer.addPass(bloom);
+    composer.addPass(new OutputPass());
+    const vignette = new ShaderPass(VignetteShader);
+    vignette.uniforms["offset"].value = 0.6;
+    vignette.uniforms["darkness"].value = 0.38;
+    composer.addPass(vignette);
+  } catch {
+    composer = null;
+    bloom = null;
+  }
 
   function makePaperTexture(): THREE.CanvasTexture {
     const canvas = document.createElement("canvas");
@@ -1270,8 +1272,7 @@ function buildGame(
     renderer.setSize(w, h);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
-    renderTarget.setSize(w, h);
-    composer.setSize(w, h);
+    composer?.setSize(w, h);
   }
   const ro = new ResizeObserver(onResize);
   ro.observe(host);
@@ -1579,7 +1580,17 @@ function buildGame(
       0.18 * (1 - playerState.y / 7);
 
     emitHud();
-    composer.render();
+    if (composer) {
+      try {
+        composer.render();
+      } catch {
+        composer = null;
+        bloom = null;
+        renderer.render(scene, camera);
+      }
+    } else {
+      renderer.render(scene, camera);
+    }
   }
 
   raf = requestAnimationFrame(tick);
@@ -1591,8 +1602,7 @@ function buildGame(
     ro.disconnect();
     window.clearTimeout(toastTimer);
     clock.dispose();
-    composer.dispose();
-    renderTarget.dispose();
+    composer?.dispose();
     groundTex.dispose();
     skyTex.dispose();
     mountTex.dispose();
