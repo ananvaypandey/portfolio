@@ -1,24 +1,16 @@
 ﻿"use client";
 
 import { useEffect, useRef, useState } from "react";
-import * as THREE from "three";
-import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
-import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
-import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
-import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass.js";
-import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
-import { VignetteShader } from "three/examples/jsm/shaders/VignetteShader.js";
 import {
   fetchLeaderboard,
   submitScore,
   getSavedName,
   storeName,
-  sanitizeName,
   leaderboardEnabled,
   type LeaderboardEntry,
 } from "@/lib/leaderboard";
 
-type UiState = "ready" | "playing" | "paused" | "over" | "unsupported";
+type UiState = "ready" | "playing" | "paused" | "over" | "win";
 
 type Hud = {
   score: number;
@@ -31,70 +23,315 @@ type Hud = {
   x2: boolean;
 };
 
-interface ObData {
-  mesh: THREE.Mesh;
-  lane: number;
-  height: number;
-  depth: number;
-  active: boolean;
-  kind: "box" | "bar" | "coin" | "power";
-  variant?: "shield" | "magnet" | "x2";
-  gaveBonus: boolean;
-  boss?: boolean;
-}
-
 interface GameHandles {
   start: () => void;
   togglePause: () => void;
   resume: () => void;
   restart: () => void;
   jump: () => void;
-  lane: (dir: -1 | 1) => void;
+  lane: (dir: -1 | 0 | 1) => void;
 }
 
-interface Particle {
-  mesh: THREE.Mesh;
-  mat: THREE.MeshBasicMaterial;
-  active: boolean;
-  life: number;
-  maxLife: number;
-  vel: THREE.Vector3;
-  grav: number;
-  drag: number;
-}
-
-const LANE_X = [-3, 0, 3];
-const LANE_BOUNDS = [-1.5, 1.5];
-const PLAYER_HALF = 0.65;
-const OB_DEPTH = 0.9;
-const GRAVITY = 58;
-const JUMP_V = 17.5;
-const START_SPEED = 15;
-const MAX_SPEED = 38;
-const BEST_KEY = "paper-runner-best";
-
+const TILE = 40;
+const ROWS = 14;
+const GROUND_TOP = 12;
+const VIEW_H = ROWS * TILE;
+const P_W = 24;
+const P_H = 36;
 const COLORS = {
-  bg: 0xf6f1e3,
-  ink: 0x211f1a,
-  accent: 0x3151c2,
-  accent2: 0x203aa0,
-  red: 0xcf4a33,
-  faint: 0x9a9281,
-  gold: 0xf2c14e,
-  goldDark: 0xb97f1d,
-  paper: 0xfdfaf0,
+  paper: "#fbf7ec",
+  ink: "#3a3f4b",
+  inkSoft: "rgba(58,63,75,0.55)",
+  accent: "#3151c2",
+  accent2: "#203aa0",
+  red: "#cf4a33",
+  faint: "#b9b39f",
+  gold: "#e8a53a",
+  goldDark: "#b07a1b",
+  ruled: "rgba(120,148,205,0.16)",
+  margin: "rgba(207,74,51,0.35)",
 };
 
-function detectWebGL() {
-  try {
-    const canvas = document.createElement("canvas");
-    return !!(
-      window.WebGLRenderingContext &&
-      (canvas.getContext("webgl2") || canvas.getContext("webgl"))
-    );
-  } catch {
-    return false;
-  }
+const LEVELS: {
+  w: number;
+  gaps?: [number, number][];
+  platforms: { x: number; y: number; w: number }[];
+  coins: { x: number; y: number }[];
+  enemies: { x: number; span: number }[];
+  boss?: boolean;
+}[] = [
+  {
+    w: 90,
+    platforms: [
+      { x: 14, y: 10, w: 4 },
+      { x: 22, y: 8, w: 4 },
+      { x: 40, y: 9, w: 3 },
+      { x: 52, y: 7, w: 4 },
+      { x: 66, y: 9, w: 3 },
+    ],
+    coins: [
+      { x: 11, y: 11 },
+      { x: 12, y: 11 },
+      { x: 15, y: 9 },
+      { x: 16, y: 9 },
+      { x: 17, y: 9 },
+      { x: 23, y: 7 },
+      { x: 24, y: 7 },
+      { x: 25, y: 7 },
+      { x: 41, y: 8 },
+      { x: 42, y: 8 },
+      { x: 53, y: 6 },
+      { x: 54, y: 6 },
+      { x: 55, y: 6 },
+      { x: 31, y: 11 },
+      { x: 32, y: 11 },
+      { x: 33, y: 11 },
+      { x: 72, y: 11 },
+      { x: 73, y: 11 },
+      { x: 74, y: 11 },
+    ],
+    enemies: [
+      { x: 30, span: 3 },
+      { x: 60, span: 3 },
+    ],
+  },
+  {
+    w: 130,
+    gaps: [
+      [55, 58],
+      [96, 99],
+    ],
+    platforms: [
+      { x: 10, y: 8, w: 4 },
+      { x: 24, y: 6, w: 5 },
+      { x: 44, y: 9, w: 4 },
+      { x: 58, y: 6, w: 3 },
+      { x: 72, y: 8, w: 5 },
+      { x: 98, y: 6, w: 4 },
+      { x: 112, y: 9, w: 4 },
+    ],
+    coins: [
+      { x: 12, y: 7 },
+      { x: 13, y: 7 },
+      { x: 25, y: 5 },
+      { x: 26, y: 5 },
+      { x: 27, y: 5 },
+      { x: 28, y: 5 },
+      { x: 59, y: 5 },
+      { x: 60, y: 5 },
+      { x: 61, y: 5 },
+      { x: 99, y: 5 },
+      { x: 100, y: 5 },
+      { x: 101, y: 5 },
+      { x: 50, y: 11 },
+      { x: 51, y: 11 },
+      { x: 52, y: 11 },
+      { x: 78, y: 11 },
+      { x: 79, y: 11 },
+      { x: 80, y: 11 },
+      { x: 118, y: 11 },
+      { x: 119, y: 11 },
+    ],
+    enemies: [
+      { x: 18, span: 2 },
+      { x: 34, span: 3 },
+      { x: 68, span: 2 },
+      { x: 108, span: 3 },
+    ],
+  },
+  {
+    w: 150,
+    gaps: [
+      [70, 74],
+      [110, 114],
+    ],
+    platforms: [
+      { x: 12, y: 9, w: 3 },
+      { x: 20, y: 7, w: 4 },
+      { x: 30, y: 5, w: 3 },
+      { x: 44, y: 8, w: 4 },
+      { x: 60, y: 6, w: 3 },
+      { x: 76, y: 9, w: 3 },
+      { x: 90, y: 6, w: 5 },
+      { x: 104, y: 8, w: 4 },
+      { x: 120, y: 7, w: 3 },
+      { x: 134, y: 8, w: 4 },
+    ],
+    coins: [
+      { x: 21, y: 6 },
+      { x: 22, y: 6 },
+      { x: 23, y: 6 },
+      { x: 31, y: 4 },
+      { x: 32, y: 4 },
+      { x: 61, y: 5 },
+      { x: 62, y: 5 },
+      { x: 63, y: 5 },
+      { x: 91, y: 5 },
+      { x: 92, y: 5 },
+      { x: 93, y: 5 },
+      { x: 94, y: 5 },
+      { x: 48, y: 11 },
+      { x: 49, y: 11 },
+      { x: 82, y: 11 },
+      { x: 83, y: 11 },
+      { x: 84, y: 11 },
+      { x: 126, y: 11 },
+      { x: 127, y: 11 },
+      { x: 128, y: 11 },
+      { x: 140, y: 11 },
+      { x: 141, y: 11 },
+    ],
+    enemies: [
+      { x: 16, span: 2 },
+      { x: 38, span: 3 },
+      { x: 56, span: 2 },
+      { x: 86, span: 2 },
+      { x: 98, span: 3 },
+      { x: 130, span: 2 },
+    ],
+  },
+  {
+    w: 170,
+    gaps: [
+      [60, 64],
+      [120, 125],
+    ],
+    platforms: [
+      { x: 8, y: 8, w: 3 },
+      { x: 16, y: 6, w: 4 },
+      { x: 28, y: 4, w: 3 },
+      { x: 40, y: 7, w: 4 },
+      { x: 52, y: 5, w: 3 },
+      { x: 68, y: 8, w: 4 },
+      { x: 82, y: 6, w: 5 },
+      { x: 96, y: 8, w: 4 },
+      { x: 108, y: 5, w: 3 },
+      { x: 130, y: 7, w: 4 },
+      { x: 144, y: 8, w: 4 },
+      { x: 156, y: 6, w: 4 },
+    ],
+    coins: [
+      { x: 17, y: 5 },
+      { x: 18, y: 5 },
+      { x: 19, y: 5 },
+      { x: 29, y: 3 },
+      { x: 30, y: 3 },
+      { x: 53, y: 4 },
+      { x: 54, y: 4 },
+      { x: 69, y: 7 },
+      { x: 70, y: 7 },
+      { x: 83, y: 5 },
+      { x: 84, y: 5 },
+      { x: 85, y: 5 },
+      { x: 109, y: 4 },
+      { x: 110, y: 4 },
+      { x: 131, y: 6 },
+      { x: 132, y: 6 },
+      { x: 133, y: 6 },
+      { x: 157, y: 5 },
+      { x: 158, y: 5 },
+      { x: 46, y: 11 },
+      { x: 47, y: 11 },
+      { x: 88, y: 11 },
+      { x: 89, y: 11 },
+      { x: 90, y: 11 },
+      { x: 101, y: 11 },
+      { x: 102, y: 11 },
+      { x: 138, y: 11 },
+      { x: 139, y: 11 },
+    ],
+    enemies: [
+      { x: 11, span: 2 },
+      { x: 34, span: 2 },
+      { x: 46, span: 3 },
+      { x: 74, span: 2 },
+      { x: 92, span: 2 },
+      { x: 100, span: 3 },
+      { x: 124, span: 2 },
+      { x: 152, span: 2 },
+    ],
+  },
+  {
+    w: 180,
+    gaps: [
+      [70, 74],
+      [120, 124],
+    ],
+    platforms: [
+      { x: 10, y: 9, w: 3 },
+      { x: 22, y: 7, w: 4 },
+      { x: 36, y: 5, w: 3 },
+      { x: 50, y: 8, w: 4 },
+      { x: 64, y: 6, w: 3 },
+      { x: 78, y: 9, w: 4 },
+      { x: 92, y: 7, w: 5 },
+      { x: 106, y: 8, w: 4 },
+      { x: 118, y: 6, w: 3 },
+      { x: 132, y: 8, w: 4 },
+      { x: 146, y: 7, w: 4 },
+    ],
+    coins: [
+      { x: 23, y: 6 },
+      { x: 24, y: 6 },
+      { x: 25, y: 6 },
+      { x: 37, y: 4 },
+      { x: 38, y: 4 },
+      { x: 65, y: 5 },
+      { x: 66, y: 5 },
+      { x: 67, y: 5 },
+      { x: 93, y: 6 },
+      { x: 94, y: 6 },
+      { x: 95, y: 6 },
+      { x: 96, y: 6 },
+      { x: 119, y: 5 },
+      { x: 133, y: 7 },
+      { x: 134, y: 7 },
+      { x: 147, y: 6 },
+      { x: 148, y: 6 },
+      { x: 149, y: 6 },
+      { x: 30, y: 11 },
+      { x: 31, y: 11 },
+      { x: 54, y: 11 },
+      { x: 55, y: 11 },
+      { x: 84, y: 11 },
+      { x: 85, y: 11 },
+      { x: 86, y: 11 },
+      { x: 112, y: 11 },
+      { x: 113, y: 11 },
+      { x: 140, y: 11 },
+      { x: 141, y: 11 },
+      { x: 160, y: 11 },
+      { x: 161, y: 11 },
+    ],
+    enemies: [
+      { x: 14, span: 2 },
+      { x: 56, span: 3 },
+      { x: 88, span: 2 },
+      { x: 100, span: 2 },
+      { x: 128, span: 3 },
+      { x: 138, span: 2 },
+      { x: 152, span: 2 },
+    ],
+    boss: true,
+  },
+];
+
+const BEST_KEY = "paper-runner-best";
+
+function mulberry32(seed: number) {
+  let a = seed;
+  return () => {
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function n2(x: number, y: number): number {
+  const s = Math.sin(x * 127.1 + y * 311.7) * 43758.5453;
+  return s - Math.floor(s);
 }
 
 function buildGame(
@@ -105,1525 +342,1177 @@ function buildGame(
     setHandles: (h: GameHandles) => void;
   }
 ): () => void {
-  let renderer: THREE.WebGLRenderer;
-  try {
-    renderer = new THREE.WebGLRenderer({
-      antialias: true,
-      powerPreference: "high-performance",
-    });
-  } catch {
-    throw new Error("webgl-unsupported");
+  let disposed = false;
+  const canvas = document.createElement("canvas");
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const ctx0 = canvas.getContext("2d");
+  if (!ctx0) {
+    callbacks.onUi("over");
+    return () => {};
   }
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.setSize(host.clientWidth, host.clientHeight);
-  renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.16;
-  renderer.outputColorSpace = THREE.SRGBColorSpace;
-  renderer.domElement.style.display = "block";
-  host.appendChild(renderer.domElement);
+  const ctx: CanvasRenderingContext2D = ctx0;
+  canvas.style.display = "block";
+  canvas.style.width = "100%";
+  canvas.style.height = "100%";
+  host.appendChild(canvas);
 
-  const scene = new THREE.Scene();
-  scene.fog = new THREE.Fog(COLORS.bg, 40, 165);
-
-  const camera = new THREE.PerspectiveCamera(
-    62,
-    host.clientWidth / host.clientHeight,
-    0.1,
-    900
-  );
-  camera.position.set(0, 5.6, 11);
-  camera.lookAt(0, 1.4, -12);
-
-  const skyCanvas = document.createElement("canvas");
-  skyCanvas.width = 2;
-  skyCanvas.height = 512;
-  {
-    const g = skyCanvas.getContext("2d");
-    if (g) {
-      const grad = g.createLinearGradient(0, 0, 0, 512);
-      grad.addColorStop(0, "#bcd2f2");
-      grad.addColorStop(0.45, "#e9ecdf");
-      grad.addColorStop(0.8, "#fdf6e3");
-      grad.addColorStop(1, "#f8f0da");
-      g.fillStyle = grad;
-      g.fillRect(0, 0, 2, 512);
-    }
+  let cw = 0;
+  let ch = 0;
+  let k = 1; // world → screen scale
+  let viewW = 0;
+  function fit() {
+    cw = Math.max(1, host.clientWidth);
+    ch = Math.max(1, host.clientHeight);
+    canvas.width = Math.round(cw * dpr);
+    canvas.height = Math.round(ch * dpr);
+    k = Math.max(0.2, Math.min(ch / VIEW_H, cw / 760, 1.6));
+    viewW = cw / k;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.scale(k, k);
   }
-  const skyTex = new THREE.CanvasTexture(skyCanvas);
-  skyTex.colorSpace = THREE.SRGBColorSpace;
-  const sky = new THREE.Mesh(
-    new THREE.SphereGeometry(420, 24, 18),
-    new THREE.MeshBasicMaterial({ map: skyTex, side: THREE.BackSide, fog: false })
-  );
-  scene.add(sky);
+  fit();
+  const ro = new ResizeObserver(fit);
+  ro.observe(host);
+  window.addEventListener("resize", fit);
 
-  scene.add(new THREE.HemisphereLight(0xfff6e8, 0xc8d6ee, 1.05));
-  const amb = new THREE.AmbientLight(0xfff1dc, 0.35);
-  scene.add(amb);
-  const sun = new THREE.DirectionalLight(0xfff3dd, 2.8);
-  sun.position.set(7, 14, 10);
-  sun.castShadow = true;
-  sun.shadow.mapSize.set(4096, 4096);
-  sun.shadow.radius = 12;
-  sun.shadow.camera.left = -16;
-  sun.shadow.camera.right = 16;
-  sun.shadow.camera.top = 18;
-  sun.shadow.camera.bottom = -8;
-  sun.shadow.camera.near = 1;
-  sun.shadow.camera.far = 60;
-  sun.shadow.bias = -0.0004;
-  scene.add(sun);
-  const rim = new THREE.DirectionalLight(0xbcd0ff, 0.5);
-  rim.position.set(-9, 6, -8);
-  scene.add(rim);
-  const glow = new THREE.PointLight(0x3151c2, 6, 8, 2);
-  glow.position.set(0, 3, 2);
-  scene.add(glow);
-
-  let composer: EffectComposer | null = null;
-  let bloom: UnrealBloomPass | null = null;
-  try {
-    composer = new EffectComposer(renderer);
-    composer.addPass(new RenderPass(scene, camera));
-    bloom = new UnrealBloomPass(
-      new THREE.Vector2(host.clientWidth, host.clientHeight),
-      0.3,
-      0.55,
-      0.92
-    );
-    composer.addPass(bloom);
-    composer.addPass(new OutputPass());
-    const vignette = new ShaderPass(VignetteShader);
-    vignette.uniforms["offset"].value = 0.6;
-    vignette.uniforms["darkness"].value = 0.38;
-    composer.addPass(vignette);
-  } catch {
-    composer = null;
-    bloom = null;
-  }
-
-  function makePaperTexture(): THREE.CanvasTexture {
-    const canvas = document.createElement("canvas");
-    canvas.width = 512;
-    canvas.height = 512;
-    const g = canvas.getContext("2d");
-    if (!g) throw new Error("no 2d context");
-
-    const warm = g.createLinearGradient(0, 0, 512, 512);
-    warm.addColorStop(0, "#f4eed9");
-    warm.addColorStop(0.5, "#f6f1e2");
-    warm.addColorStop(1, "#efe8d2");
-    g.fillStyle = warm;
-    g.fillRect(0, 0, 512, 512);
-
-    for (let y = 0; y < 512; y += 2) {
-      for (let x = 0; x < 512; x += 2) {
-        const n = Math.random();
-        if (n < 0.03) {
-          g.fillStyle = `rgba(148,126,84,${0.02 + Math.random() * 0.05})`;
-          g.fillRect(x, y, 2, 2);
-        } else if (n < 0.05) {
-          g.fillStyle = `rgba(214,203,173,${0.5 + Math.random() * 0.3})`;
-          g.fillRect(x, y, 2, 2);
-        }
-      }
-    }
-
-    g.strokeStyle = "rgba(96,124,196,0.22)";
-    g.lineWidth = 1;
-    for (let y = 32; y < 512; y += 24) {
-      g.beginPath();
-      g.moveTo(0, y + 0.5);
-      g.lineTo(512, y + 0.5);
-      g.stroke();
-    }
-    g.strokeStyle = "rgba(207,74,51,0.3)";
-    g.lineWidth = 2;
-    g.beginPath();
-    g.moveTo(66, 0);
-    g.lineTo(66, 512);
-    g.stroke();
-    g.fillStyle = "rgba(49,81,194,0.18)";
-    g.fillRect(188, 16, 14, 14);
-    g.fillRect(472, 196, 14, 14);
-    g.fillRect(120, 404, 14, 14);
-    g.strokeStyle = "rgba(60,120,84,0.25)";
-    g.lineWidth = 1;
-    g.strokeRect(24, 24, 464, 464);
-    g.strokeStyle = "rgba(60,55,45,0.15)";
-    g.lineWidth = 2;
-    g.beginPath();
-    g.arc(320, 256, 60, 0, Math.PI * 2);
-    g.stroke();
-    g.strokeStyle = "rgba(60,55,45,0.1)";
-    for (let y = 320; y < 512; y += 24) {
-      g.beginPath();
-      g.moveTo(66, y);
-      g.quadraticCurveTo(180, y - 6, 300, y);
-      g.stroke();
-    }
-    const tex = new THREE.CanvasTexture(canvas);
-    tex.wrapS = THREE.RepeatWrapping;
-    tex.wrapT = THREE.RepeatWrapping;
-    tex.repeat.set(10, 44);
-    tex.anisotropy = 16;
-    tex.colorSpace = THREE.SRGBColorSpace;
-    return tex;
-  }
-
-  const groundTex = makePaperTexture();
-  const groundMat = new THREE.MeshStandardMaterial({
-    map: groundTex,
-    color: 0xfdfaf0,
-    roughness: 0.9,
-    metalness: 0,
-  });
-  const ground = new THREE.Mesh(new THREE.PlaneGeometry(80, 320), groundMat);
-  ground.rotation.x = -Math.PI / 2;
-  ground.receiveShadow = true;
-  scene.add(ground);
-
-  const laneLineMat = new THREE.MeshBasicMaterial({
-    color: 0x3151c2,
-    transparent: true,
-    opacity: 0.08,
-  });
-  for (const x of LANE_BOUNDS) {
-    const line = new THREE.Mesh(
-      new THREE.PlaneGeometry(0.05, 320),
-      laneLineMat
-    );
-    line.rotation.x = -Math.PI / 2;
-    line.position.set(x, 0.02, 0);
-    scene.add(line);
-  }
-
-  const mountCanvas = document.createElement("canvas");
-  mountCanvas.width = 1024;
-  mountCanvas.height = 256;
-  {
-    const g = mountCanvas.getContext("2d");
-    if (g) {
-      const layer = (
-        base: number,
-        color: string,
-        step: number,
-        amp: number,
-        seed: number
-      ) => {
-        g.fillStyle = color;
-        g.beginPath();
-        g.moveTo(0, 256);
-        const n = 1024 / step;
-        for (let i = 0; i <= n; i++) {
-          const x = i * step;
-          const y =
-            base +
-            Math.abs(Math.sin(seed + i * 0.7)) * amp +
-            Math.sin(seed * 2 + i * 2.7) * amp * 0.22 +
-            Math.random() * amp * 0.16;
-          g.lineTo(x, y);
-        }
-        g.lineTo(1024, 256);
-        g.closePath();
-        g.fill();
-      };
-      layer(206, "#f7efd9", 64, 26, 1.2);
-      layer(168, "#dfe6ca", 96, 44, 4.1);
-      layer(126, "#c7d4c0", 128, 62, 8.3);
-      layer(90, "#9fb6be", 144, 70, 12.7);
-    }
-  }
-  const mountTex = new THREE.CanvasTexture(mountCanvas);
-  mountTex.wrapS = THREE.RepeatWrapping;
-  mountTex.colorSpace = THREE.SRGBColorSpace;
-  const bandGeo = new THREE.PlaneGeometry(640, 64);
-  const farBand = new THREE.Mesh(
-    bandGeo,
-    new THREE.MeshBasicMaterial({
-      map: mountTex,
-      fog: false,
-      transparent: true,
-      opacity: 0.95,
-    })
-  );
-  farBand.position.set(0, 26, -185);
-  scene.add(farBand);
-  const nearBand = new THREE.Mesh(
-    bandGeo,
-    new THREE.MeshBasicMaterial({
-      map: mountTex,
-      fog: false,
-      transparent: true,
-      opacity: 0.5,
-    })
-  );
-  nearBand.position.set(0, 20, -140);
-  scene.add(nearBand);
-
-  const sunCanvas = document.createElement("canvas");
-  sunCanvas.width = 128;
-  sunCanvas.height = 128;
-  {
-    const sg = sunCanvas.getContext("2d");
-    if (sg) {
-      const grad = sg.createRadialGradient(64, 64, 4, 64, 64, 64);
-      grad.addColorStop(0, "rgba(255,240,200,0.95)");
-      grad.addColorStop(0.5, "rgba(255,229,160,0.35)");
-      grad.addColorStop(1, "rgba(255,229,160,0)");
-      sg.fillStyle = grad;
-      sg.fillRect(0, 0, 128, 128);
-    }
-  }
-  const sunTex = new THREE.CanvasTexture(sunCanvas);
-  sunTex.colorSpace = THREE.SRGBColorSpace;
-  const sunDisc = new THREE.Mesh(
-    new THREE.PlaneGeometry(36, 36),
-    new THREE.MeshBasicMaterial({
-      map: sunTex,
-      transparent: true,
-      fog: false,
-      depthWrite: false,
-    })
-  );
-  sunDisc.position.set(40, 27, -236);
-  scene.add(sunDisc);
-
-  function makeScenery() {
-    const cloudMat = new THREE.MeshBasicMaterial({
-      color: 0xffffff,
-      transparent: true,
-      opacity: 0.55,
-    });
-    for (let i = 0; i < 7; i++) {
-      const cloud = new THREE.Group();
-      for (let j = 0; j < 3; j++) {
-        const puff = new THREE.Mesh(
-          new THREE.SphereGeometry(0.9 + Math.random() * 0.7, 12, 10),
-          cloudMat
-        );
-        puff.position.set((j - 1) * 1.1, Math.random() * 0.3, 0);
-        puff.scale.y = 0.55;
-        cloud.add(puff);
-      }
-      cloud.position.set(
-        (Math.random() < 0.5 ? -1 : 1) * (13 + Math.random() * 10),
-        4.5 + Math.random() * 4,
-        -40 - Math.random() * 110
-      );
-      scene.add(cloud);
-      drifters.push({ group: cloud, speed: 0.28 + Math.random() * 0.12 });
-    }
-    for (let i = 0; i < 9; i++) {
-      const note = new THREE.Mesh(
-        new THREE.PlaneGeometry(1.1, 1.4),
-        new THREE.MeshBasicMaterial({
-          color: Math.random() < 0.5 ? COLORS.paper : 0xfff1be,
-          transparent: true,
-          opacity: 0.85,
-          side: THREE.DoubleSide,
-        })
-      );
-      note.geometry.translate(0, 0.35, 0);
-      note.position.set(
-        (Math.random() < 0.5 ? -1 : 1) * (8.5 + Math.random() * 5),
-        1.6 + Math.random() * 2.2,
-        -30 - Math.random() * 120
-      );
-      note.rotation.y = (Math.random() - 0.5) * 0.5;
-      note.rotation.x = (Math.random() - 0.5) * 0.3 + 0.25;
-      scene.add(note);
-      drifters.push({ group: note, speed: 0.45 + Math.random() * 0.15 });
-    }
-    for (let i = 0; i < 10; i++) {
-      const strip = new THREE.Mesh(
-        new THREE.BoxGeometry(0.06, 0.6 + Math.random() * 1.4, 8 + Math.random() * 10),
-        new THREE.MeshBasicMaterial({
-          color: 0x211f1a,
-          transparent: true,
-          opacity: 0.12,
-        })
-      );
-      strip.position.set(
-        (Math.random() < 0.5 ? -1 : 1) * (6.5 + Math.random() * 2.5),
-        1 + Math.random() * 2.4,
-        -120 - Math.random() * 90
-      );
-      strip.rotation.z = Math.random() < 0.5 ? -0.5 : 0.5;
-      scene.add(strip);
-      drifters.push({ group: strip, speed: 1 });
-    }
-  }
-  const drifters: { group: THREE.Object3D; speed: number }[] = [];
-  makeScenery();
-
-  const playerMat = new THREE.MeshStandardMaterial({
-    color: COLORS.accent,
-    roughness: 0.55,
-    metalness: 0.05,
-  });
-  const player = new THREE.Mesh(
-    new THREE.BoxGeometry(1.25, 1.5, 1.25),
-    playerMat
-  );
-  player.castShadow = true;
-  const pupilMat = new THREE.MeshBasicMaterial({ color: COLORS.ink });
-  const eyes: { eye: THREE.Mesh; pupil: THREE.Mesh; mat: THREE.MeshBasicMaterial }[] = [];
-  for (const sx of [-0.29, 0.29]) {
-    const eye = new THREE.Mesh(
-      new THREE.SphereGeometry(0.17, 12, 12),
-      new THREE.MeshBasicMaterial({ color: 0xffffff })
-    );
-    eye.position.set(sx, 0.18, 0.63);
-    player.add(eye);
-    const pupil = new THREE.Mesh(
-      new THREE.SphereGeometry(0.085, 10, 10),
-      pupilMat
-    );
-    pupil.position.set(sx, 0.16, 0.77);
-    player.add(pupil);
-    eyes.push({ eye, pupil, mat: eye.material as THREE.MeshBasicMaterial });
-  }
-  const browMat = new THREE.MeshBasicMaterial({ color: COLORS.ink });
-  for (const sx of [-0.29, 0.29]) {
-    const brow = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.06, 0.05), browMat);
-    brow.position.set(sx, 0.5, 0.64);
-    player.add(brow);
-  }
-  const footGeo = new THREE.BoxGeometry(0.34, 0.62, 0.4);
-  const footMatL = new THREE.MeshStandardMaterial({ color: COLORS.accent2, roughness: 0.6 });
-  const footMatR = new THREE.MeshStandardMaterial({ color: COLORS.red, roughness: 0.6 });
-  const feet: { mesh: THREE.Mesh; phase: number }[] = [];
-  for (const sx of [-0.3, 0.3]) {
-    const foot = new THREE.Mesh(footGeo, sx < 0 ? footMatL : footMatR);
-    foot.position.set(sx, -1.02, 0.12);
-    foot.castShadow = true;
-    player.add(foot);
-    feet.push({ mesh: foot, phase: sx < 0 ? 0 : Math.PI });
-  }
-  scene.add(player);
-
-  const shadowBlob = new THREE.Mesh(
-    new THREE.CircleGeometry(0.85, 24),
-    new THREE.MeshBasicMaterial({
-      color: 0x000000,
-      transparent: true,
-      opacity: 0.18,
-    })
-  );
-  shadowBlob.rotation.x = -Math.PI / 2;
-  shadowBlob.position.y = 0.01;
-  scene.add(shadowBlob);
-
-  const poolCanvas = document.createElement("canvas");
-  poolCanvas.width = 128;
-  poolCanvas.height = 128;
-  {
-    const pg = poolCanvas.getContext("2d");
-    if (pg) {
-      const grad = pg.createRadialGradient(64, 64, 6, 64, 64, 64);
-      grad.addColorStop(0, "rgba(255,214,140,0.9)");
-      grad.addColorStop(0.45, "rgba(255,190,110,0.35)");
-      grad.addColorStop(1, "rgba(255,190,110,0)");
-      pg.fillStyle = grad;
-      pg.fillRect(0, 0, 128, 128);
-    }
-  }
-  const poolTex = new THREE.CanvasTexture(poolCanvas);
-  poolTex.colorSpace = THREE.SRGBColorSpace;
-  const lightPool = new THREE.Mesh(
-    new THREE.PlaneGeometry(5.2, 5.2),
-    new THREE.MeshBasicMaterial({
-      map: poolTex,
-      transparent: true,
-      opacity: 0.55,
-      depthWrite: false,
-      blending: THREE.AdditiveBlending,
-    })
-  );
-  lightPool.rotation.x = -Math.PI / 2;
-  lightPool.position.y = 0.015;
-  scene.add(lightPool);
-
-  const bubble = new THREE.Mesh(
-    new THREE.SphereGeometry(1.15, 24, 18),
-    new THREE.MeshBasicMaterial({
-      color: COLORS.accent,
-      transparent: true,
-      opacity: 0.14,
-    })
-  );
-  bubble.visible = false;
-  scene.add(bubble);
-
-  const particlePool: Particle[] = [];
-  function getParticle(
-    color: number,
-    size: number,
-    opacity: number,
-    additive = false
-  ): Particle | null {
-    const entry = particlePool.find((p) => !p.active);
-    if (entry) {
-      entry.mat.color.setHex(color);
-      entry.mat.opacity = opacity;
-      entry.mat.blending = additive
-        ? THREE.AdditiveBlending
-        : THREE.NormalBlending;
-      entry.mat.depthWrite = !additive;
-      entry.mesh.scale.setScalar(size);
-      entry.mesh.visible = true;
-      return entry;
-    }
-    if (particlePool.length >= 160) return null;
-    const mat = new THREE.MeshBasicMaterial({
-      color,
-      transparent: true,
-      opacity,
-      blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending,
-      depthWrite: !additive,
-    });
-    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), mat);
-    mesh.visible = false;
-    scene.add(mesh);
-    const p: Particle = {
-      mesh,
-      mat,
-      active: false,
-      life: 0,
-      maxLife: 1,
-      vel: new THREE.Vector3(),
-      grav: 0,
-      drag: 0,
-    };
-    particlePool.push(p);
-    return p;
-  }
-  function burst(
-    center: THREE.Vector3,
-    color: number,
-    count: number,
-    speed: number,
-    size: number,
-    life: number,
-    grav = 22,
-    spreadY = 4,
-    additive = false
-  ) {
-    for (let i = 0; i < count; i++) {
-      const p = getParticle(color, size, 1, additive);
-      if (!p) continue;
-      const theta = Math.random() * Math.PI * 2;
-      const up = Math.random() * spreadY;
-      const r = speed * (0.35 + Math.random() * 0.65);
-      p.mesh.position.copy(center);
-      p.vel.set(Math.cos(theta) * r, up, Math.sin(theta) * r);
-      p.grav = grav;
-      p.drag = 0.985;
-      p.life = life * (0.6 + Math.random() * 0.4);
-      p.maxLife = p.life;
-      p.active = true;
-    }
-  }
-
-  const boxMat = new THREE.MeshStandardMaterial({
-    color: COLORS.red,
-    roughness: 0.7,
-  });
-  const boxMat2 = new THREE.MeshStandardMaterial({
-    color: COLORS.accent2,
-    roughness: 0.7,
-  });
-  const boxMatInk = new THREE.MeshStandardMaterial({
-    color: COLORS.ink,
-    roughness: 0.78,
-  });
-  const BOX_MATS = [boxMat, boxMat2, boxMatInk];
-
-  function faceSet(base: THREE.MeshStandardMaterial): THREE.Material[] {
-    const c = base.color;
-    const mk = (mul: number, rough = 0.7) => {
-      const m = new THREE.MeshStandardMaterial({
-        color: new THREE.Color(c).multiplyScalar(mul),
-        roughness: rough,
-      });
-      base.addEventListener("dispose", () => m.dispose());
-      return m;
-    };
-    return [mk(0.9), mk(0.9), mk(1.18, 0.62), mk(0.72), mk(0.85), mk(0.85)];
-  }
-  const BOX_FACE_SETS = BOX_MATS.map(faceSet);
-  function faceSetFor(mat: THREE.Material): THREE.Material[] | THREE.Material {
-    const i = BOX_MATS.indexOf(mat as THREE.MeshStandardMaterial);
-    return i >= 0 ? BOX_FACE_SETS[i] : mat;
-  }
-  const boxGeo = new THREE.BoxGeometry(1.4, 1, OB_DEPTH);
-  const barGeo = new THREE.BoxGeometry(10.2, 1.15, OB_DEPTH);
-  const coinMat = new THREE.MeshStandardMaterial({
-    color: 0xffd54a,
-    roughness: 0.18,
-    metalness: 0.9,
-    emissive: 0xffa63d,
-    emissiveIntensity: 0.45,
-  });
-  const coinGeo = new THREE.CylinderGeometry(0.55, 0.55, 0.13, 22);
-  const shieldMat = new THREE.MeshStandardMaterial({
-    color: COLORS.accent,
-    roughness: 0.25,
-    metalness: 0.5,
-    emissive: COLORS.accent,
-    emissiveIntensity: 0.7,
-  });
-  const shieldGeo = new THREE.TorusGeometry(0.5, 0.11, 16, 32);
-  const magnetMat = new THREE.MeshStandardMaterial({
-    color: 0xffd54a,
-    roughness: 0.22,
-    metalness: 0.85,
-    emissive: COLORS.gold,
-    emissiveIntensity: 0.45,
-  });
-  const magnetGeo = new THREE.SphereGeometry(0.42, 20, 16);
-  const pillarGeo = new THREE.BoxGeometry(0.5, 1.05, 0.5);
-
-  const pool: ObData[] = [];
-
-  function makeBox(lane: number, height: number, mat: THREE.Material): ObData {
-    const mesh = new THREE.Mesh(boxGeo, faceSetFor(mat));
-    mesh.position.set(LANE_X[lane], height / 2, -90);
-    mesh.visible = false;
-    mesh.castShadow = true;
-    scene.add(mesh);
-    const ob: ObData = {
-      mesh,
-      lane,
-      height,
-      depth: OB_DEPTH,
-      active: false,
-      kind: "box",
-      gaveBonus: false,
-    };
-    pool.push(ob);
-    return ob;
-  }
-  function takeBox(
-    lane: number,
-    height: number,
-    mat: THREE.Material
-  ): ObData {
-    for (const ob of pool) {
-      if (!ob.active && ob.kind === "box") {
-        ob.active = true;
-        ob.lane = lane;
-        ob.height = height;
-        ob.gaveBonus = false;
-        ob.mesh.material = faceSetFor(mat);
-        ob.mesh.scale.set(1, height, 1);
-        ob.mesh.position.set(LANE_X[lane], height / 2, -90);
-        ob.mesh.visible = true;
-        return ob;
-      }
-    }
-    return makeBox(lane, height, mat);
-  }
-  function takeBar(): ObData {
-    for (const ob of pool) {
-      if (!ob.active && ob.kind === "bar") {
-        ob.active = true;
-        ob.lane = -1;
-        ob.gaveBonus = false;
-        ob.mesh.position.z = -90;
-        ob.mesh.visible = true;
-        return ob;
-      }
-    }
-    const mesh = new THREE.Mesh(
-      barGeo,
-      Math.random() < 0.5 ? boxMat : boxMat2
-    );
-    mesh.position.set(0, 1.15 / 2, -90);
-    mesh.visible = false;
-    mesh.castShadow = true;
-    scene.add(mesh);
-    const ob: ObData = {
-      mesh,
-      lane: -1,
-      height: 1.15,
-      depth: OB_DEPTH,
-      active: false,
-      kind: "bar",
-      gaveBonus: false,
-    };
-    pool.push(ob);
-    return ob;
-  }
-  function takeCoin(lane: number, y: number): ObData {
-    for (const ob of pool) {
-      if (!ob.active && ob.kind === "coin") {
-        ob.active = true;
-        ob.lane = lane;
-        ob.gaveBonus = false;
-        ob.mesh.position.set(LANE_X[lane], y, -90);
-        ob.mesh.rotation.set(Math.PI / 2, 0, 0);
-        ob.mesh.visible = true;
-        return ob;
-      }
-    }
-    const mesh = new THREE.Mesh(coinGeo, coinMat);
-    mesh.rotation.x = Math.PI / 2;
-    mesh.position.set(LANE_X[lane], y, -90);
-    mesh.visible = false;
-    mesh.castShadow = true;
-    scene.add(mesh);
-    const ob: ObData = {
-      mesh,
-      lane,
-      height: 0.01,
-      depth: 0.6,
-      active: false,
-      kind: "coin",
-      gaveBonus: false,
-    };
-    pool.push(ob);
-    return ob;
-  }
-  function takePower(
-    lane: number,
-    variant: NonNullable<ObData["variant"]>
-  ): ObData {
-    for (const ob of pool) {
-      if (!ob.active && ob.kind === "power" && ob.variant === variant) {
-        ob.active = true;
-        ob.lane = lane;
-        ob.gaveBonus = false;
-        ob.mesh.position.set(LANE_X[lane], ob.mesh.position.y, -90);
-        ob.mesh.visible = true;
-        return ob;
-      }
-    }
-    let mesh: THREE.Mesh;
-    const y = 1.0;
-    if (variant === "shield") {
-      mesh = new THREE.Mesh(shieldGeo, shieldMat);
-    } else if (variant === "magnet") {
-      mesh = new THREE.Mesh(magnetGeo, magnetMat);
-    } else {
-      mesh = new THREE.Mesh(pillarGeo, magnetMat);
-    }
-    mesh.position.set(LANE_X[lane], y, -90);
-    mesh.visible = false;
-    mesh.castShadow = true;
-    scene.add(mesh);
-    const ob: ObData = {
-      mesh,
-      lane,
-      height: 0.4,
-      depth: 0.9,
-      active: false,
-      kind: "power",
-      variant,
-      gaveBonus: false,
-    };
-    pool.push(ob);
-    return ob;
-  }
-
-  function recycle(ob: ObData) {
-    ob.active = false;
-    ob.gaveBonus = false;
-    ob.mesh.visible = false;
-  }
-
-  const playerState = {
-    lane: 1,
-    x: 0,
-    y: 0,
-    vy: 0,
-    grounded: true,
-    squash: 0,
-    run: 0,
-    blink: 0,
-    dying: false,
-  };
+  // ---- state ----
   let mode: UiState = "ready";
-  let speed = START_SPEED;
-  let coins = 0;
-  let score = 0;
-  let spawnTimer = 1.0;
-  let powerTimer = 8;
+  let levelIndex = 0;
   let best = 0;
   try {
     best = Number(localStorage.getItem(BEST_KEY)) || 0;
   } catch {
     best = 0;
   }
-  let combo = 1;
-  let comboT = 0;
-  let magnetT = 0;
-  let x2T = 0;
-  let invulnT = 0;
-  let shieldActive = false;
-  let hitStopT = 0;
-  let shakeT = 0;
-  let shakeMag = 0;
-  let dustTimer = 0;
-  let fovTimer = 0;
+  let score = 0;
+  let coins = 0;
+  let lives = 3;
+  let runPhase = 0;
+  let vy = 0;
+  let grounded = false;
+  let squash = 0;
+  let preHop = 0;
+  let facing = 1;
+  let camX = 0;
+  let deadT = 0;
+  let clearT = -1;
+  let wonBoss = false;
+  let bossPassed = false;
+  let flashT = 0;
 
-  const clock = new THREE.Timer();
-  let raf = 0;
-  let lastHud = "";
-  const scorePos = new THREE.Vector3(0, 0.8, 0);
+  type Enemy = {
+    x: number;
+    y: number;
+    half: number;
+    vx: number;
+    cx: number;
+    span: number;
+    t: number;
+  };
+  type Coin = { x: number; y: number };
+  let solid: boolean[] = [];
+  let coinsA: Coin[] = [];
+  let enemies: Enemy[] = [];
+  let flagTX = 0;
+  let bossX = -1;
+  let worldW = 0;
 
-  function toast(text: string) {
-    elToast.textContent = text;
-    elToast.style.opacity = "1";
-    elToast.style.transform = "translate(-50%, 0)";
-    window.clearTimeout(toastTimer);
-    toastTimer = window.setTimeout(() => {
-      elToast.style.opacity = "0";
-      elToast.style.transform = "translate(-50%, 10px)";
-    }, 1600);
+  function tileX(px: number) {
+    return Math.floor(px / TILE);
   }
-  const elToast = document.createElement("div");
-  elToast.style.cssText =
-    "position:absolute;left:50%;bottom:14%;transform:translate(-50%,10px);opacity:0;transition:opacity .35s ease,transform .35s ease;z-index:6;background:rgba(253,250,240,.9);border:2px solid rgba(43,40,34,.25);border-radius:9999px;padding:6px 18px;font-family:var(--font-caveat),cursive;font-size:22px;color:#211f1a;pointer-events:none;box-shadow:0 8px 24px -10px rgba(60,50,30,.4);white-space:nowrap";
-  host.appendChild(elToast);
-  let toastTimer = 0;
+  function isSolid(tx: number, ty: number) {
+    if (ty >= GROUND_TOP) return false; // treated via grid below
+    if (tx < 0 || ty < 0) return false;
+    if (tx >= worldW) return true;
+    return solid[ty * worldW + tx] === true;
+  }
 
-  let audioCtx: AudioContext | null = null;
-  let muted = false;
-  function tone(
-    f0: number,
-    f1: number,
-    dur: number,
-    type: OscillatorType,
-    vol: number,
-    delay = 0
-  ) {
-    if (muted) return;
-    try {
-      audioCtx = audioCtx || new AudioContext();
-      if (audioCtx.state === "suspended") void audioCtx.resume();
-      const t0 = audioCtx.currentTime + delay;
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.type = type;
-      osc.frequency.setValueAtTime(f0, t0);
-      osc.frequency.exponentialRampToValueAtTime(Math.max(1, f1), t0 + dur);
-      gain.gain.setValueAtTime(0.0001, t0);
-      gain.gain.exponentialRampToValueAtTime(vol, t0 + 0.012);
-      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-      osc.connect(gain).connect(audioCtx.destination);
-      osc.start(t0);
-      osc.stop(t0 + dur + 0.02);
-    } catch {
-      /* audio unsupported */
+  function loadLevel(idx: number) {
+    const L = LEVELS[idx];
+    worldW = L.w * TILE;
+    solid = new Array(ROWS * L.w).fill(false);
+
+    // ground
+    for (let tx = 0; tx < L.w; tx++) {
+      const inGap =
+        L.gaps?.some(([a, b]) => tx >= a && tx <= b) ?? false;
+      if (!inGap) {
+        for (let ry = GROUND_TOP; ry < ROWS; ry++) {
+          solid[ry * L.w + tx] = true;
+        }
+      }
     }
+    // platforms
+    for (const p of L.platforms) {
+      for (let x = p.x; x < p.x + p.w; x++) {
+        if (x < 0 || x >= L.w) continue;
+        solid[p.y * L.w + x] = true;
+      }
+    }
+    coinsA = L.coins.map((c) => ({ x: c.x * TILE + TILE / 2, y: c.y * TILE + TILE / 2 }));
+    enemies = L.enemies.map((e) => ({
+      x: e.x * TILE + TILE / 2,
+      y: GROUND_TOP * TILE - 12,
+      half: 13,
+      vx: 0,
+      cx: e.x * TILE + TILE / 2,
+      span: e.span,
+      t: Math.random() * 9,
+    }));
+    flagTX = L.w - 3;
+    bossX = L.boss ? L.w - 10 : -1;
+    wonBoss = false;
+    bossPassed = false;
+    clearT = -1;
   }
-  function sfxJump() {
-    tone(320, 640, 0.14, "square", 0.06);
+
+  function resetRun() {
+    levelIndex = 0;
+    score = 0;
+    coins = 0;
+    lives = 3;
+    loadLevel(0);
+    spawnPlayer();
   }
-  function sfxCoin() {
-    tone(880, 1320, 0.1, "sine", 0.09);
-    tone(1320, 1760, 0.1, "sine", 0.05, 0.05);
+
+  function spawnPlayer() {
+    px = 2.5 * TILE;
+    py = 0;
+    vy = 0;
+    preHop = 0.06;
+    grounded = false;
+    squash = 0.25;
+    deadT = 0;
+    clearT = -1;
   }
-  function sfxLand() {
-    tone(150, 90, 0.09, "sine", 0.06);
-  }
-  function sfxPower() {
-    tone(520, 1040, 0.18, "triangle", 0.09);
-    tone(780, 1560, 0.2, "triangle", 0.06, 0.07);
-  }
-  function sfxCrash() {
-    tone(160, 40, 0.5, "sawtooth", 0.14);
-    tone(60, 30, 0.4, "square", 0.08, 0.02);
-  }
-  function sfxShield() {
-    tone(300, 720, 0.16, "sine", 0.1);
-  }
+
+  let px = 0;
+  let py = 0;
+
+  const ACCEL = 1500;
+  const FRICTION = 2100;
+  const GRAV = 1550;
+  const JUMP_V = -570;
+  const STOMP_V = -380;
+  const MAXFALL = 920;
+  const RUN = 225;
+
+  let keyL = false;
+  let keyR = false;
+  let keyJ = false;
+  let wasJ = false;
+  let realDelta = 0;
 
   function emitHud() {
-    const hud: Hud = {
-      score: Math.floor(score),
+    callbacks.onHud({
+      score,
       coins,
       best,
-      speed: Math.round(speed * 10) / 10,
-      mult: combo,
-      shield: shieldActive,
-      magnet: magnetT > 0,
-      x2: x2T > 0,
-    };
-    const key = [
-      hud.score,
-      hud.coins,
-      hud.best,
-      hud.speed,
-      hud.mult,
-      hud.shield,
-      hud.magnet,
-      hud.x2,
-    ].join("|");
-    if (key !== lastHud) {
-      lastHud = key;
-      callbacks.onHud(hud);
+      speed: levelIndex + 1,
+      mult: bossPassed ? 2 : 1,
+      shield: false,
+      magnet: false,
+      x2: false,
+    });
+  }
+
+  function tick() {
+    raf = requestAnimationFrame(tick);
+    if (disposed) return;
+    realDelta = Math.min(performance.now() / 1000 - lastT, 0.05);
+    lastT = performance.now() / 1000;
+    if (lastT < 0.02) return;
+    const dt = realDelta;
+    const t = lastT;
+
+    if (mode === "playing") {
+      update(dt);
+    }
+    if (mode === "ready") {
+      px += (0.5 * TILE - px) * Math.min(1, dt * 2);
+      py = GROUND_TOP * TILE - P_H + Math.sin(t * 1.6) * 3;
+    }
+    draw();
+    emitHud();
+  }
+
+  function update(dt: number) {
+    if (deadT > 0) {
+      deadT -= dt;
+      if (deadT <= 0) {
+        lives -= 1;
+        if (lives <= 0) {
+          gameOver();
+          return;
+        }
+        loadLevel(levelIndex);
+        spawnPlayer();
+      }
+      return;
+    }
+    if (clearT > 0) {
+      clearT -= dt;
+      flashT += dt;
+      if (clearT <= 0) {
+        levelIndex += 1;
+        if (levelIndex >= LEVELS.length) {
+          mode = "win";
+          tone(523, 1046, 0.3, "triangle", 0.12);
+          tone(659, 1318, 0.3, "triangle", 0.12, 0.12);
+          tone(784, 1568, 0.6, "triangle", 0.14, 0.24);
+          saveBest();
+          callbacks.onUi("win");
+        } else {
+          loadLevel(levelIndex);
+          spawnPlayer();
+          toast(`level ${levelIndex + 1}`);
+          tone(440, 660, 0.18, "triangle", 0.1);
+        }
+      }
+      return;
+    }
+
+    // ---- horizontal ----
+    let ax = 0;
+    if (keyL) ax -= 1;
+    if (keyR) ax += 1;
+    vx += ax * ACCEL * dt;
+    if (ax === 0) {
+      const s = Math.sign(vx);
+      vx -= s * FRICTION * dt;
+      if (Math.sign(vx) !== s) vx = 0;
+    }
+    const maxV = RUN;
+    vx = Math.max(-maxV, Math.min(maxV, vx));
+    if (Math.abs(vx) > 1) facing = Math.sign(vx);
+
+    // ---- vertical ----
+    const jumpBuffered = keyJ && !wasJ;
+    if (jumpBuffered && (grounded || preHop > 0)) {
+      vy = JUMP_V;
+      grounded = false;
+      preHop = 0;
+      squash = -0.2;
+      tone(300, 620, 0.14, "triangle", 0.07);
+    }
+    if (!keyJ && vy < -160) vy = Math.max(-160, vy * 0.6);
+    vy = Math.min(MAXFALL, vy + GRAV * dt);
+    wasJ = keyJ;
+    if (preHop > 0) preHop -= dt;
+
+    // ---- move & collide ----
+    moveX(dt);
+    moveY(dt);
+
+    // squash on land
+    if (grounded && !prevGrounded) {
+      squash = 0.32;
+      tone(120, 70, 0.08, "sine", 0.06);
+    }
+    prevGrounded = grounded;
+    squash = Math.max(0, squash - dt * 2.2);
+
+    if (grounded && Math.abs(vx) > 4) {
+      runPhase += dt * (1 + Math.abs(vx) / RUN) * 9;
+    }
+    flashT += dt;
+
+    // ---- coins ----
+    const pcx = px + P_W / 2;
+    const pcy = py + P_H / 2;
+    const kept: Coin[] = [];
+    for (const c of coinsA) {
+      if (Math.abs(c.x - pcx) < 30 && Math.abs(c.y - pcy) < 34) {
+        coins += 1;
+        score += 100;
+        tone(880, 1320, 0.1, "sine", 0.08);
+        tone(1320, 1760, 0.1, "sine", 0.05, 0.05);
+        burst(c.x, c.y, 6);
+      } else {
+        kept.push(c);
+      }
+    }
+    coinsA = kept;
+
+    // ---- enemies ----
+    for (const e of enemies) {
+      e.t += dt;
+      const want = e.x + e.vx * dt + Math.sin(e.t * 0.7) * 0.1;
+      const nx2 = Math.max(e.cx - e.span * TILE, Math.min(e.cx + e.span * TILE, want));
+      if (Math.abs(nx2 - e.cx) >= e.span * TILE) e.vx = -e.vx;
+      e.x = nx2;
+      if (e.vx === 0) e.vx = (Math.random() < 0.5 ? -1 : 1) * 55;
+      // turn at wall
+      const dir = Math.sign(e.vx) || 1;
+      const front = e.x + dir * (e.half + 4);
+      const below = isSolid(tileX(front), tileX(e.y + 14) + 1);
+      if (!below && Math.abs(e.x - e.cx) > 8) e.vx = -e.vx;
+
+      // overlap with player
+      if (Math.abs(e.x - pcx) < e.half + 12 && Math.abs(e.y - pcy) < 26) {
+        if (py + P_H - e.y < 14 && vy > 0) {
+          // stomp
+          e.vx = 0;
+          score += 200;
+          vy = STOMP_V;
+          burst(e.x, e.y, 10);
+          tone(200, 90, 0.16, "square", 0.1);
+        } else {
+          die();
+          return;
+        }
+      }
+    }
+
+    // ---- boss gate ----
+    if (bossX > 0 && !wonBoss) {
+      const bx = bossX * TILE;
+      if (pcx > bx + 46 && py + P_H < 3.6 * TILE) {
+        wonBoss = true;
+        bossPassed = true;
+        score += 2500;
+        coins += 10;
+        squash = 0.5;
+        tone(120, 880, 0.8, "square", 0.14);
+        toast("YOU BEAT THE LEGEND ∞!");
+        // clear level
+        clearT = 2.6;
+        burst(bx, 3 * TILE, 18);
+      } else if (pcx > bx - 20 && pcx < bx + 56 && py + P_H < 3.6 * TILE) {
+        // fell into boss
+        die();
+        return;
+      }
+    }
+
+    // ---- flag ----
+    const flagPx = flagTX * TILE + TILE / 2;
+    if (pcx > flagPx - 14 && clearT < 0 && deadT <= 0) {
+      if (!wonBoss || LEVELS[levelIndex].boss !== true) {
+        clearT = 1.8;
+        score += 500;
+        tone(523, 1046, 0.25, "triangle", 0.11);
+        tone(659, 1318, 0.25, "triangle", 0.11, 0.1);
+        tone(784, 1568, 0.4, "triangle", 0.12, 0.2);
+      } else {
+        wonBoss = false;
+        bossPassed = true;
+        score += 2500;
+        coins += 10;
+        tone(120, 880, 0.8, "square", 0.14);
+        toast("YOU BEAT THE LEGEND ∞!");
+      }
+    }
+
+    // ---- fall out ----
+    if (py > ROWS * TILE + 40) {
+      die();
+    }
+
+    // ---- camera ----
+    const target = px - viewW * 0.42;
+    camX += (target - camX) * Math.min(1, dt * 6);
+    camX = Math.max(0, Math.min(worldW - viewW, camX));
+  }
+
+  let prevGrounded = false;
+  let vx = 0;
+
+  function moveX(dt: number) {
+    px += vx * dt;
+    const half = P_W / 2;
+    if (px - half < 0) {
+      px = half;
+      vx = 0;
+    }
+    if (px + half > worldW) {
+      px = worldW - half;
+      vx = 0;
+    }
+    const minTx = tileX(px - half);
+    const maxTx = tileX(px + half);
+    const topTy = tileX(py + 2);
+    const botTy = tileX(py + P_H - 2);
+    for (let ty = topTy; ty <= botTy; ty++) {
+      if (isSolid(minTx, ty) && px - half < (minTx + 1) * TILE) {
+        px = (minTx + 1) * TILE + half;
+        vx = 0;
+        break;
+      }
+      if (isSolid(maxTx, ty) && px + half > maxTx * TILE) {
+        px = maxTx * TILE - half;
+        vx = 0;
+        break;
+      }
     }
   }
 
-  function reset() {
-    speed = START_SPEED;
-    coins = 0;
-    score = 0;
-    spawnTimer = 1.0;
-    powerTimer = 7;
-    combo = 1;
-    comboT = 0;
-    magnetT = 0;
-    x2T = 0;
-    invulnT = 0;
-    shieldActive = false;
-    hitStopT = 0;
-    shakeT = 0;
-    shakeMag = 0;
-    playerState.lane = 1;
-    playerState.x = 0;
-    playerState.vy = 0;
-    playerState.y = 0;
-    playerState.grounded = true;
-    playerState.squash = 0;
-    playerState.run = 0;
-    playerState.blink = 0;
-    playerState.dying = false;
-    for (const ob of pool) recycle(ob);
-    bubble.visible = false;
-    player.position.set(0, 0.8, 0);
-    player.rotation.set(0, 0, 0);
-    player.scale.set(1, 1, 1);
-    clock.update();
-    clock.getDelta();
+  function moveY(dt: number) {
+    const wasGroundedAt = grounded;
+    vy = Math.min(MAXFALL, vy + GRAV * dt * 0);
+    py += vy * dt;
+    grounded = false;
+    const half = P_W / 2;
+    const minTx = tileX(px - half + 2);
+    const maxTx = tileX(px + half - 2);
+    if (vy <= 0) {
+      const ty = tileX(py + 2);
+      for (let tx = minTx; tx <= maxTx; tx++) {
+        if (isSolid(tx, ty) && py + 2 < (ty + 1) * TILE) {
+          if (py + 2 < (ty + 1) * TILE + 2) {
+            py = (ty + 1) * TILE - 2;
+            vy = 0;
+            break;
+          }
+        }
+      }
+    } else {
+      const ty = tileX(py + P_H - 2);
+      for (let tx = minTx; tx <= maxTx; tx++) {
+        if (isSolid(tx, ty) && py + P_H - 2 >= ty * TILE) {
+          if (py + P_H - 2 >= ty * TILE - 0.01) {
+            py = ty * TILE - P_H + 2;
+            grounded = true;
+            vy = 0;
+            squash = Math.max(squash, 0.3);
+            break;
+          }
+        }
+      }
+    }
+    if (!wasGroundedAt && grounded) {
+      // landing handled in update via prevGrounded
+    }
   }
-
-  callbacks.onHud({
-    score: 0,
-    coins: 0,
-    best,
-    speed: START_SPEED,
-    mult: 1,
-    shield: false,
-    magnet: false,
-    x2: false,
-  });
 
   function die() {
-    if (playerState.dying) return;
-    playerState.dying = true;
-    speed = 0;
-    combo = 1;
-    sfxCrash();
-    shakeMag = 0.5;
-    shakeT = 0.6;
-    burst(scorePos, COLORS.ink, 22, 6, 0.22, 0.9, 30, 7);
-    burst(scorePos, COLORS.accent, 14, 5, 0.16, 0.8, 24, 6);
-    burst(scorePos, COLORS.red, 12, 9, 0.2, 1.0, 34, 8);
-    window.setTimeout(() => {
-      if (mode === "playing" || mode === "paused") {
-        mode = "over";
-        callbacks.onUi("over");
-      }
-    }, 700);
+    if (mode !== "playing" || deadT > 0) return;
+    deadT = 1.15;
+    vy = -420;
+    lives -= 0;
+    tone(160, 40, 0.5, "sawtooth", 0.13);
+    burst(px + P_W / 2, py + P_H / 2, 12);
   }
 
-  function gameOverCleanup() {
-    const scoreInt = Math.floor(score);
-    if (scoreInt > best) {
-      best = scoreInt;
+  function gameOver() {
+    mode = "over";
+    saveBest();
+    callbacks.onUi("over");
+  }
+
+  function saveBest() {
+    if (score > best) {
+      best = score;
       try {
         localStorage.setItem(BEST_KEY, String(best));
       } catch {
         /* ignore */
       }
     }
-  }
-
-  function hit(ob: ObData) {
-    if (invulnT > 0) return;
-    if (shieldActive && ob.kind !== "coin") {
-      shieldActive = false;
-      bubble.visible = false;
-      invulnT = 1.0;
-      hitStopT = 0.14;
-      sfxShield();
-      burst(
-        new THREE.Vector3(playerState.x, 0.9, 0),
-        COLORS.accent,
-        18,
-        6,
-        0.18,
-        0.7,
-        26,
-        6,
-        true
-      );
-      toast("shield spent!");
-      return;
-    }
-    gameOverCleanup();
-    die();
-  }
-
-      let bossSpawned = false;
-      const BOSS_AT = 20_250;
-
-  function takeBoss() {
-    bossSpawned = true;
-    const ob = takeBar() ?? takeBox(1, 1.2, BOX_MATS[0]);
-    if (!ob) return;
-    ob.boss = true;
-    ob.mesh.scale.set(7.5, 2.6, 5.5);
-    const mats = Array.isArray(ob.mesh.material)
-      ? ob.mesh.material
-      : [ob.mesh.material as THREE.MeshStandardMaterial];
-    for (const m of mats) {
-      const mat = m as THREE.MeshStandardMaterial;
-      mat.color.setHex(COLORS.red);
-      mat.emissive.setHex(0x7a2416);
-      mat.emissiveIntensity = 0.85;
-      mat.roughness = 0.4;
-    }
-    ob.mesh.position.set(0, ob.height / 2, -150);
-    toast("a legend stands in your way…");
-  }
-
-  function defeatBoss() {
-    bossSpawned = false;
-    burst(
-      player.position.clone().setY(1.2),
-      COLORS.gold,
-      160,
-      9,
-      0.3,
-      1.15,
-      30,
-      10,
-      true
-    );
-    burst(
-      player.position.clone().setY(1.2),
-      COLORS.red,
-      80,
-      6,
-      0.2,
-      0.9,
-      22,
-      8,
-      true
-    );
-    toast("YOU DEFEATED ANANVAY PANDEY \u221E!");
-    tone(120, 2600, 0.9, "square", 0.15);
-    score += 2500 * (x2T > 0 ? 2 : 1);
-    coins += 10;
     emitHud();
   }
 
-  function spawn() {
-    const r = Math.random();
-    if (!bossSpawned && speed >= MAX_SPEED && score >= BOSS_AT) {
-      takeBoss();
-      return;
+  // ---- drawing ----
+  function strokeLine(
+    x1: number,
+    y1: number,
+    x2: number,
+    y2: number,
+    clr: string,
+    w = 1.7,
+    seedN = 3,
+    t = 0
+  ) {
+    ctx.strokeStyle = clr;
+    ctx.lineWidth = w;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    const dist = Math.hypot(x2 - x1, y2 - y1);
+    const steps = Math.max(2, Math.min(8, Math.round(dist / 8)));
+    let px2 = x1;
+    let py2 = y1;
+    for (let i = 1; i <= steps; i++) {
+      const tt = i / steps;
+      const bx = x1 + (x2 - x1) * tt;
+      const by = y1 + (y2 - y1) * tt;
+      const j = (n2((bx * 0.2 + seedN), by * 0.2 + t * 0.4) - 0.5) * 2.6 * w;
+      const nx = -(y2 - y1) / (dist || 1);
+      const ny = (x2 - x1) / (dist || 1);
+      px2 = bx + nx * j;
+      py2 = by + ny * j;
+      ctx.lineTo(px2, py2);
     }
-    if (r < 0.13) {
-      const lane = Math.floor(Math.random() * 3);
-      for (let i = 0; i < 3; i++) {
-        const coin = takeCoin(lane, 2.0);
-        if (coin) coin.mesh.position.z = -90 + i * 6;
-      }
-    } else if (r < 0.31) {
-      const bar = takeBar();
-      if (bar) (bar.mesh.material as THREE.MeshStandardMaterial).color.setHex(
-        Math.random() < 0.5 ? COLORS.red : COLORS.accent2
-      );
-    } else if (r < 0.61) {
-      const lane = Math.floor(Math.random() * 3);
-      const tall = Math.random() < 0.42;
-      const mat = BOX_MATS[Math.floor(Math.random() * BOX_MATS.length)];
-      takeBox(lane, tall ? 2.75 : 1.4, mat);
-    } else if (r < 0.85) {
-      const lanes = Math.random() < 0.5 ? [0, 1] : [1, 2];
-      const tall = Math.random() < 0.42;
-      takeBox(lanes[0], tall ? 2.75 : 1.4, BOX_MATS[0]);
-      takeBox(lanes[1], tall ? 2.75 : 1.4, BOX_MATS[1]);
-    } else {
-      const lanes = Math.random() < 0.5 ? [0, 2] : [0, 1];
-      takeBox(lanes[0], 1.6, Math.random() < 0.5 ? BOX_MATS[0] : BOX_MATS[2]);
-      takeBox(lanes[1], 1.6, Math.random() < 0.5 ? BOX_MATS[1] : BOX_MATS[0]);
+    ctx.stroke();
+    // second lighter pass for hand feel
+    if (w >= 1.6) {
+      ctx.globalAlpha = 0.35;
+      ctx.strokeStyle = clr;
+      ctx.beginPath();
+      ctx.moveTo(x1 + 1, y1 + 1);
+      ctx.lineTo(x2 + 1, y2 + 1);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
     }
   }
 
-  function spawnPower() {
-    const variant: NonNullable<ObData["variant"]>[] = [
-      "shield",
-      "magnet",
-      "x2",
-    ];
-    const v = variant[Math.floor(Math.random() * variant.length)];
-    const lane = Math.floor(Math.random() * 3);
-    takePower(lane, v);
-    toast(v === "shield" ? "shield!"
-      : v === "magnet" ? "magnet!"
-      : "double points!");
-    sfxPower();
+  function rectSketch(
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    clr: string,
+    seedN: number,
+    t: number
+  ) {
+    strokeLine(x, y, x + w, y, clr, 1.6, seedN, t);
+    strokeLine(x + w, y, x + w, y + h, clr, 1.6, seedN + 1, t);
+    strokeLine(x + w, y + h, x, y + h, clr, 1.6, seedN + 2, t);
+    strokeLine(x, y + h, x, y, clr, 1.6, seedN + 3, t);
   }
 
-  function addCombo() {
-    combo = Math.min(5, combo + 1);
-    comboT = 3.2;
-  }
-
-  const jumpNow = () => {
-    if (playerState.dying || mode !== "playing") return;
-    if (playerState.grounded) {
-      playerState.vy = JUMP_V;
-      playerState.grounded = false;
-      sfxJump();
+  function circleSketch(
+    cx: number,
+    cy: number,
+    r: number,
+    clr: string,
+    seedN: number,
+    t: number,
+    fill?: string
+  ) {
+    const R = mulberry32(seedN);
+    if (fill) {
+      ctx.fillStyle = fill;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r - 1, 0, Math.PI * 2);
+      ctx.fill();
     }
-  };
-
-  const moveLane = (dir: -1 | 1) => {
-    if (mode !== "playing" || playerState.dying) return;
-    playerState.lane = Math.max(
-      0,
-      Math.min(2, playerState.lane + (dir as number))
-    );
-  };
-
-  function start() {
-    reset();
-    mode = "playing";
-    tone(420, 840, 0.16, "triangle", 0.07);
-    callbacks.onUi("playing");
-  }
-
-  function pause() {
-    if (mode !== "playing" || playerState.dying) return;
-    mode = "paused";
-    callbacks.onUi("paused");
-  }
-
-  function resume() {
-    if (mode !== "paused") return;
-    clock.update();
-    clock.getDelta();
-    mode = "playing";
-    callbacks.onUi("playing");
-  }
-
-  function togglePause() {
-    if (mode === "playing" && !playerState.dying) pause();
-    else if (mode === "paused") resume();
-  }
-
-  callbacks.setHandles({
-    start,
-    togglePause,
-    resume,
-    restart: start,
-    jump: jumpNow,
-    lane: moveLane,
-  });
-
-  const onKey = (e: KeyboardEvent) => {
-    const t = e.target as HTMLElement | null;
-    if (
-      t &&
-      (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)
-    ) {
-      return;
+    ctx.strokeStyle = clr;
+    ctx.lineWidth = 1.7;
+    ctx.beginPath();
+    const segs = 14;
+    for (let i = 0; i <= segs; i++) {
+      const a = (i / segs) * Math.PI * 2;
+      const rr = r + (R() - 0.5) * 3;
+      const xp = cx + Math.cos(a) * rr;
+      const yp = cy + Math.sin(a) * rr;
+      if (i === 0) ctx.moveTo(xp, yp);
+      else ctx.lineTo(xp, yp);
     }
-    const c = e.code;
-    if (c === "ArrowLeft" || c === "KeyA") {
-      e.preventDefault();
-      moveLane(-1);
-    } else if (c === "ArrowRight" || c === "KeyD") {
-      e.preventDefault();
-      moveLane(1);
-    } else if (c === "Space" || c === "ArrowUp" || c === "KeyW") {
-      e.preventDefault();
-      if (mode === "playing") jumpNow();
-      else if (mode === "ready") start();
-      else if (mode === "paused") resume();
-      else if (mode === "over") start();
-    } else if (c === "Enter") {
-      e.preventDefault();
-      if (mode === "ready" || mode === "over") start();
-      else if (mode === "paused") resume();
-    } else if (c === "KeyP" || c === "Escape") {
-      togglePause();
-    } else if (c === "KeyM") {
-      muted = !muted;
-      toast(muted ? "sound off" : "sound on");
-    }
-  };
-  window.addEventListener("keydown", onKey);
-
-  function onResize() {
-    const w = host.clientWidth;
-    const h = host.clientHeight;
-    if (w === 0 || h === 0) return;
-    renderer.setSize(w, h);
-    camera.aspect = w / h;
-    camera.updateProjectionMatrix();
-    composer?.setSize(w, h);
+    ctx.stroke();
+    ctx.globalAlpha = 0.35;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r * 0.92, 0.3, Math.PI * 1.7);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
   }
-  const ro = new ResizeObserver(onResize);
-  ro.observe(host);
-  window.addEventListener("resize", onResize);
 
-  let tier = 0;
-  const tierAt = [20, 26, 32];
-
-  function tick() {
-    raf = requestAnimationFrame(tick);
-    clock.update();
-    let raw = Math.min(clock.getDelta(), 0.05);
-    if (hitStopT > 0) {
-      hitStopT -= raw;
-      raw = 0;
-    }
-    const dt = raw;
-    const t = performance.now() / 1000;
-
-    if (mode === "playing" && !playerState.dying) {
-      speed = Math.min(MAX_SPEED, speed + dt * 0.34);
-      const mult = combo * (x2T > 0 ? 2 : 1);
-      score += speed * dt * 2 * mult;
-
-      while (tier < tierAt.length && speed >= tierAt[tier]) {
-        tier++;
-        toast(`speed ${tier + 1}!`);
-        tone(500, 1000, 0.22, "triangle", 0.08);
-      }
-
-      spawnTimer -= dt;
-      if (spawnTimer <= 0) {
-        spawn();
-        const m = 0.9 + Math.random() * 0.2;
-        spawnTimer = Math.max(
-          0.38,
-          Math.min(0.95, (0.82 * (START_SPEED / speed)) * m)
-        );
-      }
-      powerTimer -= dt;
-      if (powerTimer <= 0) {
-        spawnPower();
-        powerTimer = 7 + Math.random() * 5;
-      }
-
-      if (playerState.grounded) {
-        playerState.vy = 0;
-        playerState.y = 0;
-      } else {
-        playerState.vy -= GRAVITY * dt;
-        playerState.y += playerState.vy * dt;
-        if (playerState.y <= 0) {
-          playerState.y = 0;
-          playerState.grounded = true;
-          playerState.squash = 0.34;
-          sfxLand();
-          burst(
-            new THREE.Vector3(playerState.x, 0.05, 0),
-            0xc9b489,
-            7,
-            3,
-            0.14,
-            0.5,
-            16,
-            1.5
+  function drawGround() {
+    for (let tx = 0; tx < tileX(worldW) + 1; tx++) {
+      for (let ry = GROUND_TOP; ry < ROWS; ry++) {
+        if (!isSolid(tx, ry)) continue;
+        const x = tx * TILE;
+        const y = ry * TILE;
+        ctx.fillStyle = "#f4eed9";
+        ctx.fillRect(x, y, TILE, TILE);
+        rectSketch(x, y, TILE, TILE, COLORS.inkSoft, tx * 7 + ry, flashT);
+        if (ry === GROUND_TOP) {
+          strokeLine(x, y + 1, x + TILE, y + 1, COLORS.ink, 2.1, tx * 3, flashT);
+        }
+        ctx.fillStyle = "rgba(58,63,75,0.07)";
+        for (let i = 0; i < 3; i++) {
+          ctx.fillRect(
+            x + 4 + ((tx * 13 + i * 11) % (TILE - 10)),
+            y + 6 + ((ry * 17 + i * 23) % (TILE - 12)),
+            2,
+            3
           );
         }
       }
-
-      const targetX = LANE_X[playerState.lane];
-      playerState.x += (targetX - playerState.x) * Math.min(1, dt * 11);
-      const vel = playerState.x - player.position.x;
-      player.position.x = playerState.x;
-      const baseY = playerState.y + 0.8;
-      const bob =
-        playerState.grounded && speed > 0
-          ? Math.abs(Math.sin(playerState.run * 0.5)) * 0.08 * Math.min(1, speed / 20)
-          : 0;
-      player.position.y = baseY - bob;
-      player.rotation.z = THREE.MathUtils.clamp(vel * 0.22, -0.3, 0.3);
-      player.rotation.x = -Math.abs(vel) * 0.08;
-      playerState.run += dt * (speed / START_SPEED) * 10;
-
-      const squashT = Math.max(0, playerState.squash - dt * 2.2);
-      playerState.squash = squashT;
-      const sq = Math.sin(Math.min(squashT * 2.6, Math.PI));
-      player.scale.y = 1 + sq * 0.2;
-      player.scale.x = 1 - sq * 0.13;
-      player.scale.z = 1 - sq * 0.13;
-
-      for (const f of feet) {
-        const s = Math.max(0, Math.sin(playerState.run + f.phase));
-        f.mesh.position.y = -1.02 + Math.min(0.45, s * 0.34);
-        f.mesh.rotation.x = Math.sin(playerState.run + f.phase) * 0.3;
-      }
-
-      if (playerState.blink > 0) {
-        playerState.blink -= dt;
-        for (const p of eyes) p.eye.scale.set(1, 0.15, 1);
-      } else {
-        for (const p of eyes) p.eye.scale.set(1, 1, 1);
-        if (Math.random() < dt * 0.5) playerState.blink = 0.12;
-      }
-
-      dustTimer -= dt;
-      if (dustTimer <= 0 && playerState.grounded) {
-        dustTimer = 0.09;
-        burst(
-          new THREE.Vector3(
-            playerState.x - 0.4,
-            0.05,
-            Math.random() * 0.4 - 0.2
-          ),
-          0xc9b489,
-          1,
-          2.2,
-          0.13,
-          0.45,
-          9,
-          2
-        );
-      }
-
-      const feetY = playerState.y;
-      const centerY = playerState.y + 0.8;
-      const multNow = combo * (x2T > 0 ? 2 : 1);
-
-      for (const ob of pool) {
-        if (!ob.active) continue;
-        if (ob.kind === "coin") {
-          const cx = LANE_X[ob.lane];
-          const cz = ob.mesh.position.z;
-          if (magnetT > 0) {
-            const dxC = playerState.x - cx;
-            const dzC = 0 - cz;
-            const d = Math.hypot(dxC, dzC);
-            if (d < 7 && d > 0.01) {
-              ob.mesh.position.x +=
-                (dxC / d) * Math.min(14, d) * dt * 3;
-              ob.mesh.position.z +=
-                (dzC / d) * Math.min(14, d) * dt * 3;
-            }
-          } else {
-            ob.mesh.position.z += speed * dt;
-          }
-          ob.mesh.rotation.z += dt * 3.8;
-          ob.mesh.position.y = 2.0 + Math.sin(t * 3 + cz) * 0.14;
-          const dz = Math.abs(ob.mesh.position.z);
-          const dx = Math.abs(playerState.x - ob.mesh.position.x);
-          if (
-            dz < 1.15 &&
-            dx < 1.15 &&
-            Math.abs(centerY - ob.mesh.position.y) < 1.25 &&
-            !playerState.dying
-          ) {
-            coins += 1;
-            score += 25 * multNow;
-            addCombo();
-            sfxCoin();
-            burst(ob.mesh.position.clone(), COLORS.gold, 8, 4, 0.13, 0.5, 16, 5, true);
-            if (combo === 3 || combo === 5) {
-              toast(`combo x${combo}!`);
-              tone(660, 1320, 0.22, "triangle", 0.08);
-            }
-            recycle(ob);
-          } else if (ob.mesh.position.z > 7) {
-            recycle(ob);
-          }
-          continue;
-        }
-        if (ob.kind === "power") {
-          ob.mesh.position.z += speed * dt;
-          ob.mesh.rotation.y += dt * 2.4;
-          ob.mesh.position.y =
-            (ob.variant === "x2" ? 1.0 : ob.variant === "magnet" ? 1.0 : 0.95) +
-            Math.sin(t * 2.6) * 0.16;
-          const dz = Math.abs(ob.mesh.position.z);
-          const dx = Math.abs(playerState.x - LANE_X[ob.lane]);
-          if (dz < 1.2 && dx < 1.15) {
-            if (ob.variant === "shield") {
-              shieldActive = true;
-              bubble.visible = true;
-              toast("shield on!");
-            } else if (ob.variant === "magnet") {
-              magnetT = 6;
-              toast("magnet on!");
-            } else {
-              x2T = 6;
-              toast("doubled!");
-            }
-            tone(700, 1400, 0.16, "triangle", 0.09);
-            burst(ob.mesh.position.clone(), COLORS.gold, 16, 5, 0.15, 0.6, 18, 6, true);
-            recycle(ob);
-          } else if (ob.mesh.position.z > 7) {
-            recycle(ob);
-          }
-          continue;
-        }
-
-        ob.mesh.position.z += speed * dt;
-        const obPz = ob.mesh.position.z;
-        const dx =
-          ob.kind === "bar"
-            ? 0.4
-            : Math.abs(playerState.x - LANE_X[ob.lane]);
-        const dz = Math.abs(obPz);
-        if (dz < ob.depth / 2 + PLAYER_HALF && dx < 1.05 && feetY < ob.height) {
-          hit(ob);
-          if (playerState.dying) break;
-        }
-        if (!ob.gaveBonus && obPz > 1.2) {
-          ob.gaveBonus = true;
-          if (ob.kind === "bar") {
-            if (feetY >= ob.height) {
-              if (ob.boss) {
-                defeatBoss();
-              } else {
-                score += 15 * multNow;
-                toast("clean jump +15");
-              }
-            }
-          } else if (dx < 1.9) {
-            score += 15 * multNow;
-            toast(dx < 0.9 ? "cheeky +15" : "close call +15");
-          }
-        }
-        if (obPz > 7) recycle(ob);
-      }
-
-      if (comboT > 0) {
-        comboT -= dt;
-        if (comboT <= 0 && combo > 1) {
-          combo = 1;
-          toast("combo lost");
-        }
-      }
-    } else if (mode === "playing" && playerState.dying) {
-      playerState.y = Math.max(playerState.y - dt * 5, -2.2);
-      player.rotation.z += dt * 7;
-      player.rotation.x += dt * 2;
-      player.position.y = playerState.y + 0.8;
-    } else if (mode === "ready") {
-      player.position.y = 0.8 + Math.sin(t * 2.2) * 0.12;
-      player.rotation.z = Math.sin(t * 1.4) * 0.05;
-    } else if (mode === "paused" || mode === "over") {
-      player.position.x += (0 - player.position.x) * Math.min(1, dt * 4);
     }
-
-    if (magnetT > 0) magnetT -= dt;
-    if (x2T > 0) x2T -= dt;
-    if (invulnT > 0) invulnT -= dt;
-    bubble.position.set(player.position.x, player.position.y, 0);
-    bubble.rotation.y += dt * 1.5;
-
-    for (const p of particlePool) {
-      if (!p.active) continue;
-      p.mesh.position.addScaledVector(p.vel, dt);
-      p.vel.y -= p.grav * dt;
-      p.vel.multiplyScalar(p.drag);
-      p.life -= dt;
-      const k = Math.max(0, p.life / p.maxLife);
-      p.mat.opacity = k;
-      p.mesh.scale.multiplyScalar(1 - (1 - k) * 0);
-      if (p.life <= 0) {
-        p.active = false;
-        p.mesh.visible = false;
+    // gap bottom: sketch a cliff doodle
+    if (LEVELS[levelIndex].gaps) {
+      for (const [a] of LEVELS[levelIndex].gaps!) {
+        const gx = a * TILE;
+        const gy = GROUND_TOP * TILE;
+        ctx.strokeStyle = "rgba(58,63,75,0.35)";
+        ctx.lineWidth = 1.4;
+        for (let i = 0; i < 4; i++) {
+          strokeLine(
+            gx + i * 8,
+            gy + 4,
+            gx + i * 8 + 4,
+            gy + i * 4 + 6,
+            "rgba(58,63,75,0.4)",
+            1.2,
+            11 + i,
+            flashT
+          );
+        }
+        strokeLine(gx + 2, gy + 2, gx + 2, gy, "rgba(58,63,75,0.5)", 1.4, 40, flashT);
       }
-    }
-
-    const parallax = mode === "playing" ? speed : mode === "ready" ? 6 : 0;
-    for (const d of drifters) {
-      d.group.position.z += parallax * d.speed * dt;
-      if (d.group.position.z > 8) {
-        d.group.position.z -= 240;
-        d.group.position.x =
-          (d.group.position.x < 0 ? -1 : 1) *
-          (Math.random() < 0.5 ? 8.5 + Math.random() * 5 : 13 + Math.random() * 10);
-      }
-    }
-
-    shakeT = Math.max(0, shakeT - dt);
-    const sh = shakeT > 0 ? shakeMag * shakeT * 6 : 0;
-    camera.position.x = Math.sin(t * 51) * sh * 0.3;
-    camera.position.y = 5.6 + Math.sin(t * 61) * sh * 0.18;
-    camera.lookAt(0, 1.4, -12);
-
-    fovTimer += dt;
-    if (fovTimer > 0.2) {
-      fovTimer = 0;
-      const targetFov =
-        62 + ((speed - START_SPEED) / (MAX_SPEED - START_SPEED)) * 10;
-      camera.fov += (targetFov - camera.fov) * 0.4;
-      camera.updateProjectionMatrix();
-    }
-
-    shadowBlob.position.set(player.position.x, 0.01, player.position.z);
-    glow.position.x = player.position.x;
-    glow.position.z = player.position.z - 2;
-    scorePos.copy(player.position);
-    lightPool.position.set(player.position.x, 0.015, player.position.z);
-    shadowBlob.scale.setScalar(
-      1.2 * Math.max(0.32, 1 - playerState.y / 4.2)
-    );
-    (shadowBlob.material as THREE.MeshBasicMaterial).opacity =
-      0.18 * (1 - playerState.y / 7);
-
-    emitHud();
-    if (composer) {
-      try {
-        composer.render();
-      } catch {
-        composer = null;
-        bloom = null;
-        renderer.render(scene, camera);
-      }
-    } else {
-      renderer.render(scene, camera);
     }
   }
 
+  function drawPlatform(p: { x: number; y: number; w: number }, t: number) {
+    const x = p.x * TILE;
+    const y = p.y * TILE;
+    ctx.fillStyle = "#f4eed9";
+    ctx.fillRect(x, y, p.w * TILE, TILE);
+    rectSketch(x, y, p.w * TILE, TILE, COLORS.ink, p.x * 5 + p.y, t);
+    strokeLine(x, y + 1, x + p.w * TILE, y + 1, COLORS.ink, 2.1, p.x * 3, t);
+    // tape corners
+    ctx.fillStyle = "rgba(232,165,58,0.5)";
+    ctx.save();
+    ctx.translate(x + p.w * TILE - 8, y);
+    ctx.rotate(-0.5);
+    ctx.fillRect(-4, -3, 10, 5);
+    ctx.restore();
+  }
+
+  function drawCoin(c: Coin, t: number, gone: boolean) {
+    if (gone) return;
+    const bob = Math.sin(t * 3 + c.x * 0.05) * 2;
+    const cx = c.x;
+    const cy = c.y + bob;
+    const spin = Math.max(0.18, Math.abs(Math.sin(t * 2.4 + c.x)));
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.scale(spin, 1);
+    circleSketch(0, 0, 10, COLORS.goldDark, 7 + c.x, t, COLORS.gold);
+    ctx.strokeStyle = COLORS.goldDark;
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.moveTo(0, -5);
+    ctx.quadraticCurveTo(4, 0, 0, 5);
+    ctx.stroke();
+    ctx.restore();
+    // sparkle
+    if (n2(c.x, Math.floor(t * 3)) > 0.82) {
+      ctx.strokeStyle = COLORS.goldDark;
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - 13);
+      ctx.lineTo(cx, cy - 17);
+      ctx.moveTo(cx - 4, cy - 15);
+      ctx.lineTo(cx + 4, cy - 15);
+      ctx.stroke();
+    }
+  }
+
+  function drawEnemy(e: Enemy, t: number) {
+    if (e.vx === 0) {
+      // stomped splat
+      ctx.fillStyle = "rgba(58,63,75,0.8)";
+      ctx.beginPath();
+      ctx.ellipse(e.x, e.y - 2, 15, 4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      return;
+    }
+    const wob = Math.sin(e.t * 8) * 1.5;
+    const dir = Math.sign(e.vx) || 1;
+    ctx.save();
+    ctx.translate(e.x, e.y - 6 + wob * 0.2);
+    circleSketch(0, 0, 17, COLORS.ink, 9 + e.x, t, "#efece2");
+    // angry eyes
+    ctx.strokeStyle = COLORS.ink;
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    ctx.moveTo(-8, -6);
+    ctx.lineTo(-2, -3);
+    ctx.moveTo(8, -6);
+    ctx.lineTo(2, -3);
+    ctx.stroke();
+    ctx.fillStyle = COLORS.ink;
+    ctx.beginPath();
+    ctx.arc(-5, -1, 2, 0, Math.PI * 2);
+    ctx.arc(5, -1, 2, 0, Math.PI * 2);
+    ctx.fill();
+    // mouth
+    ctx.beginPath();
+    ctx.moveTo(-4, 5);
+    ctx.lineTo(0, 7);
+    ctx.lineTo(4, 5);
+    ctx.stroke();
+    // little feet
+    ctx.lineWidth = 1.5;
+    strokeLine(0, 12, 0, 15, COLORS.ink, 1.5, 12, t);
+    strokeLine(dir * 5, 11, dir * 5, 14, COLORS.ink, 1.5, 13, t);
+    ctx.restore();
+  }
+
+  function drawPlayer(t: number) {
+    ctx.save();
+    const facingX = facing;
+    const x = px + P_W / 2 + (clearT > 0 ? Math.sin(flashT * 30) * 0 : 0);
+    const y = py + P_H;
+    ctx.translate(x, y);
+    if (clearT > 0) {
+      ctx.globalAlpha = 1;
+    }
+    const sq = Math.sin(Math.min((squash > 0 ? squash : 0) * 3.1, Math.PI));
+    const sqx = 1 + (squash > 0 ? sq * 0.2 : -Math.abs(squash) * 0.2);
+    const sqy = 1 + (squash > 0 ? -sq * 0.14 : Math.abs(squash) * 0.14);
+    ctx.scale(facingX * sqx, sqy);
+    if (facingX < 0) ctx.rotate(-Math.abs(vx) * 0.0004);
+
+    const legA = grounded ? Math.sin(runPhase) * 0.6 : 0.4;
+    const legB = grounded ? Math.sin(runPhase + Math.PI) * 0.6 : -0.4;
+    const armA = grounded ? Math.sin(runPhase + Math.PI) * 0.7 : -1.6;
+    const armB = grounded ? Math.sin(runPhase) * 0.7 : -1.8;
+
+    // legs
+    ctx.strokeStyle = COLORS.ink;
+    ctx.lineWidth = 2.6;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(-2, -14);
+    ctx.lineTo(-3 + legA * 6, -2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(4, -14);
+    ctx.lineTo(3 + legB * 6, -2);
+    ctx.stroke();
+    // feet
+    ctx.fillStyle = COLORS.red;
+    ctx.beginPath();
+    ctx.ellipse(-3 + legA * 6 + 3, 0, 4.5, 2.6, 0, 0, Math.PI * 2);
+    ctx.ellipse(3 + legB * 6 + 3, 0, 4.5, 2.6, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // body
+    ctx.fillStyle = "rgba(49,81,194,0.16)";
+    ctx.beginPath();
+    ctx.roundRect(-8, -30, 18, 18, 4);
+    ctx.fill();
+    rectSketch(-8, -30, 18, 18, COLORS.accent, 30, t);
+    // belt
+    ctx.strokeStyle = COLORS.red;
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(-8, -19);
+    ctx.lineTo(10, -19);
+    ctx.stroke();
+
+    // arms
+    ctx.strokeStyle = COLORS.ink;
+    ctx.lineWidth = 2.4;
+    ctx.beginPath();
+    ctx.moveTo(-7, -27);
+    ctx.lineTo(-10 + armA * 5, -22);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(9, -27);
+    ctx.lineTo(12 + armB * 5, -22);
+    ctx.stroke();
+
+    // head
+    ctx.translate(1, -34);
+    circleSketch(0, 0, 11, COLORS.ink, 4, t, "#fffdf6");
+    // eyes
+    ctx.fillStyle = COLORS.ink;
+    ctx.beginPath();
+    ctx.arc(-3.5, -2, 1.9, 0, Math.PI * 2);
+    ctx.arc(3.5, -2, 1.9, 0, Math.PI * 2);
+    ctx.fill();
+    // smile
+    ctx.strokeStyle = COLORS.ink;
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.arc(0, 2, 4, 0.15, Math.PI - 0.15);
+    ctx.stroke();
+    // hair scribbles
+    ctx.strokeStyle = COLORS.accent2;
+    ctx.lineWidth = 1.6;
+    for (let i = 0; i < 3; i++) {
+      beginSketch();
+      ctx.moveTo(-6 + i * 5, -8);
+      ctx.lineTo(-8 + i * 6, -12);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function beginSketch() {
+    ctx.beginPath();
+  }
+
+  function drawFlag(t: number) {
+    const fx = flagTX * TILE + TILE / 2;
+    const baseY = GROUND_TOP * TILE;
+    ctx.strokeStyle = COLORS.ink;
+    ctx.lineWidth = 2.2;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(fx, baseY);
+    ctx.lineTo(fx, baseY - 92);
+    ctx.stroke();
+    // waving flag
+    const wave = Math.sin(t * 4) * 3;
+    ctx.fillStyle = COLORS.red;
+    ctx.beginPath();
+    ctx.moveTo(fx, baseY - 92);
+    ctx.quadraticCurveTo(fx + 22, baseY - 88 + wave, fx + 34, baseY - 78 + wave);
+    ctx.quadraticCurveTo(fx + 22, baseY - 66 + wave, fx, baseY - 62);
+    ctx.closePath();
+    ctx.fill();
+    strokeLine(fx, baseY - 92, fx + 34, baseY - 78 + wave, COLORS.red, 1.6, 21, t);
+    // star on flag
+    ctx.fillStyle = "#fffdf6";
+    ctx.beginPath();
+    ctx.arc(fx + 16, baseY - 77 + wave, 4.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  function drawBoss(t: number) {
+    const bx = bossX * TILE + TILE / 2;
+    const baseY = GROUND_TOP * TILE;
+    ctx.save();
+    ctx.translate(bx + 20, baseY);
+    // emotion
+    const angry = !wonBoss;
+    // body
+    ctx.fillStyle = "rgba(49,81,194,0.14)";
+    ctx.beginPath();
+    ctx.roundRect(-70, -104, 130, 110, 12);
+    ctx.fill();
+    rectSketch(-70, -104, 130, 110, COLORS.accent, 200, t);
+    // chest ∞
+    ctx.strokeStyle = COLORS.red;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(8, -66, 9, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(24, -66, 9, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fillStyle = COLORS.red;
+    ctx.font = "600 15px Caveat, cursive";
+    ctx.textAlign = "center";
+    ctx.fillText("ANANVAY PANDEY", 0, -118 - 8);
+    ctx.fillText("the ∞ legend", 16, -118 + 8 - 4);
+    // head
+    ctx.translate(14, -120);
+    circleSketch(0, 0, 30, COLORS.ink, 55, t, "#fffdf6");
+    // furious brows
+    ctx.strokeStyle = COLORS.ink;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(-22, -12);
+    ctx.lineTo(-4, -2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(22, -12);
+    ctx.lineTo(4, -2);
+    ctx.stroke();
+    // eyes
+    ctx.fillStyle = COLORS.ink;
+    ctx.beginPath();
+    ctx.arc(-12, 6, 3.4, 0, Math.PI * 2);
+    ctx.arc(12, 6, 3.4, 0, Math.PI * 2);
+    ctx.fill();
+    // roaring mouth
+    if (angry) {
+      ctx.strokeStyle = COLORS.ink;
+      ctx.lineWidth = 2.4;
+      ctx.beginPath();
+      ctx.ellipse(0, 20, 10, 5, 0, 0, Math.PI * 2);
+      ctx.stroke();
+    } else {
+      ctx.strokeStyle = COLORS.ink;
+      ctx.beginPath();
+      ctx.arc(0, 16, 8, 0.2, Math.PI - 0.2);
+      ctx.stroke();
+    }
+    ctx.restore();
+    // "jump over me" arrow wobble
+    if (!wonBoss) {
+      const yy = 4.1 * TILE + Math.sin(t * 3) * 4;
+      ctx.strokeStyle = COLORS.red;
+      ctx.lineWidth = 2;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(bx, yy);
+      ctx.lineTo(bx, yy - 26);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = COLORS.red;
+      ctx.font = "600 15px Caveat, cursive";
+      ctx.textAlign = "center";
+      ctx.fillText("jump over!", bx, yy - 34);
+    }
+  }
+
+  function drawPaper() {
+    ctx.fillStyle = COLORS.paper;
+    ctx.fillRect(0, 0, viewW, VIEW_H);
+    // ruled horizontal lines
+    ctx.strokeStyle = COLORS.ruled;
+    ctx.lineWidth = 1;
+    const off = camX % 32;
+    for (let y = 44; y < VIEW_H; y += 32) {
+      ctx.beginPath();
+      ctx.moveTo(-off, y);
+      ctx.lineTo(viewW + off, y);
+      ctx.stroke();
+    }
+    // red margin line (notebook)
+    ctx.strokeStyle = COLORS.margin;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(-off + 36, 0);
+    ctx.lineTo(-off + 36, VIEW_H);
+    ctx.stroke();
+    // corner doodles
+    ctx.strokeStyle = "rgba(58,63,75,0.16)";
+    ctx.lineWidth = 1.4;
+    beginSketch();
+    ctx.moveTo(26, 22);
+    ctx.lineTo(60, 22);
+    ctx.quadraticCurveTo(72, 22, 72, 34);
+    ctx.stroke();
+  }
+
+  function draw() {
+    // clear
+    ctx.fillStyle = COLORS.paper;
+    ctx.fillRect(0, 0, cw / k, ch / k);
+    ctx.save();
+    // letterbox vertical center
+    const sy = (ch / k - VIEW_H) / 2;
+    ctx.translate(0, sy > 0 ? sy : 0);
+    ctx.translate(-camX, 0);
+    drawPaper();
+    drawGround();
+    for (const p of LEVELS[levelIndex].platforms) {
+      drawPlatform(p, flashT);
+    }
+    if (bossX > 0 && !wonBoss) drawBoss(flashT);
+    if (bossX > 0) {
+      // boss zone fill sketch
+      ctx.strokeStyle = "rgba(207,74,51,0.4)";
+      ctx.lineWidth = 1.4;
+      ctx.strokeRect(bossX * TILE - 20, 0, 96, GROUND_TOP * TILE);
+      ctx.strokeStyle = "rgba(207,74,51,0.5)";
+      ctx.font = "600 16px Caveat, cursive";
+      ctx.textAlign = "center";
+      ctx.fillText("BOSS", bossX * TILE + 28, 26);
+      ctx.fillText("gate", bossX * TILE + 28, 46);
+    }
+    for (const c of coinsA) drawCoin(c, flashT, false);
+    for (const e of enemies) drawEnemy(e, flashT);
+    drawFlag(flashT);
+    drawPlayer(flashT);
+
+    // paint splashes
+    for (const p of particles) {
+      p.x += p.vx * 0.016;
+      p.y += p.vy * 0.016;
+      p.vy += 220 * 0.016;
+      p.life -= 0.04;
+      ctx.fillStyle = p.clr;
+      ctx.globalAlpha = Math.max(0, p.life);
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+
+    ctx.restore();
+
+    // vignette edges (paper shading)
+    const g = ctx.createRadialGradient(
+      cw / 2 / k,
+      ch / 2 / k,
+      Math.min(cw, ch) / 2 / k * 0.7,
+      cw / 2 / k,
+      ch / 2 / k,
+      Math.max(cw, ch) / 2 / k * 1.1
+    );
+    g.addColorStop(0, "rgba(60,50,30,0)");
+    g.addColorStop(1, "rgba(60,50,30,0.12)");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, cw / k, ch / k);
+
+    // HUD paper strip
+    ctx.fillStyle = "rgba(251,247,236,0.85)";
+    ctx.strokeStyle = COLORS.inkSoft;
+    ctx.lineWidth = 1.4;
+    ctx.strokeRect(8, 8, 132, 34);
+    ctx.fillRect(8, 8, 132, 34);
+    ctx.fillStyle = COLORS.ink;
+    ctx.font = "600 16px Caveat, cursive";
+    ctx.textAlign = "left";
+    ctx.fillText(`level ${levelIndex + 1}`, 16, 30);
+    ctx.fillStyle = COLORS.red;
+    ctx.fillText("♥".repeat(Math.max(0, lives)), viewW - 78, 30);
+    ctx.fillStyle = COLORS.goldDark;
+    ctx.fillText(`★ ${coins}`, viewW - 150, 30);
+
+    // toast
+    if (toastText && toastT > 0) {
+      ctx.fillStyle = COLORS.ink;
+      ctx.font = "700 24px Caveat, cursive";
+      ctx.textAlign = "center";
+      ctx.globalAlpha = Math.min(1, toastT);
+      ctx.fillText(toastText, viewW / 2, 60);
+      ctx.globalAlpha = 1;
+    }
+    // level clear banner
+    if (clearT > 0) {
+      ctx.fillStyle = "rgba(251,247,236,0.9)";
+      ctx.strokeStyle = COLORS.accent;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(viewW / 2 - 90, VIEW_H / 2 - 30, 180, 60);
+      ctx.fillRect(viewW / 2 - 90, VIEW_H / 2 - 30, 180, 60);
+      ctx.fillStyle = COLORS.accent2;
+      ctx.font = "700 26px Caveat, cursive";
+      ctx.textAlign = "center";
+      const lbl = wonBoss && LEVELS[levelIndex].boss ? "LEGEND DOWN!" : "LEVEL CLEAR!";
+      ctx.fillText(lbl, viewW / 2, VIEW_H / 2 + 6);
+    }
+  }
+
+  let toastText = "";
+  let toastT = 0;
+  function toast(text: string) {
+    toastText = text;
+    toastT = 2.2;
+  }
+
+  const particles: { x: number; y: number; vx: number; vy: number; r: number; life: number; clr: string }[] = [];
+  function burst(x: number, y: number, n: number) {
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const v = 40 + Math.random() * 120;
+      particles.push({
+        x,
+        y,
+        vx: Math.cos(a) * v,
+        vy: Math.sin(a) * v - 60,
+        r: 2 + Math.random() * 3,
+        life: 0.6 + Math.random() * 0.4,
+        clr: Math.random() < 0.5 ? COLORS.accent2 : COLORS.red,
+      });
+    }
+    if (particles.length > 120) particles.splice(0, particles.length - 120);
+  }
+
+  // ---- input ----
+  function onKey(e: KeyboardEvent) {
+    const t = e.target as HTMLElement | null;
+    if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable))
+      return;
+    const c = e.code;
+    if (c === "ArrowLeft" || c === "KeyA") {
+      e.preventDefault();
+      keyL = true;
+    } else if (c === "ArrowRight" || c === "KeyD") {
+      e.preventDefault();
+      keyR = true;
+    } else if (c === "Space" || c === "ArrowUp" || c === "KeyW") {
+      e.preventDefault();
+      keyJ = true;
+      if (mode === "ready" || mode === "over") start();
+      else if (mode === "paused") resume();
+    } else if (c === "Enter") {
+      e.preventDefault();
+      if (mode === "ready" || mode === "over" || mode === "win") start();
+      else if (mode === "paused") resume();
+    } else if (c === "KeyP" || c === "Escape") {
+      togglePause();
+    }
+  }
+  function onKeyUp(e: KeyboardEvent) {
+    const c = e.code;
+    if (c === "ArrowLeft" || c === "KeyA") keyL = false;
+    else if (c === "ArrowRight" || c === "KeyD") keyR = false;
+    else if (c === "Space" || c === "ArrowUp" || c === "KeyW") keyJ = false;
+  }
+  window.addEventListener("keydown", onKey);
+  window.addEventListener("keyup", onKeyUp);
+
+  // ---- public handles ----
+  function start() {
+    resetRun();
+    mode = "playing";
+    tone(420, 840, 0.16, "triangle", 0.07);
+    callbacks.onUi("playing");
+    emitHud();
+  }
+  function resume() {
+    if (mode !== "paused") return;
+    mode = "playing";
+    lastT = performance.now() / 1000;
+    callbacks.onUi("playing");
+  }
+  function togglePause() {
+    if (mode === "playing") {
+      mode = "paused";
+      callbacks.onUi("paused");
+    } else if (mode === "paused") {
+      resume();
+    }
+  }
+  function jump() {
+    keyJ = true;
+    start();
+  }
+  function lane(dir: -1 | 0 | 1) {
+    keyL = dir === -1;
+    keyR = dir === 1;
+  }
+
+  callbacks.setHandles({ start, togglePause, resume, restart: start, jump, lane });
+
+  resetRun();
+  emitHud();
+
+  let raf = 0;
+  let lastT = performance.now() / 1000;
   raf = requestAnimationFrame(tick);
 
   return () => {
+    disposed = true;
     cancelAnimationFrame(raf);
     window.removeEventListener("keydown", onKey);
-    window.removeEventListener("resize", onResize);
+    window.removeEventListener("keyup", onKeyUp);
+    window.removeEventListener("resize", fit);
     ro.disconnect();
-    window.clearTimeout(toastTimer);
-    clock.dispose();
-    composer?.dispose();
-    groundTex.dispose();
-    skyTex.dispose();
-    mountTex.dispose();
-    sunTex.dispose();
-    poolTex.dispose();
-    const disposables: (THREE.BufferGeometry | THREE.Material)[] = [];
-    scene.traverse((obj) => {
-      if (!(obj instanceof THREE.Mesh)) return;
-      disposables.push(obj.geometry);
-      const m = obj.material;
-      if (Array.isArray(m)) m.forEach((x) => disposables.push(x));
-      else disposables.push(m);
-    });
-    for (const d of disposables) d.dispose();
-    scene.clear();
-    renderer.dispose();
-    if (elToast.parentElement === host) host.removeChild(elToast);
-    if (renderer.domElement.parentElement === host) {
-      host.removeChild(renderer.domElement);
-    }
+    if (canvas.parentElement === host) host.removeChild(canvas);
   };
+}
+
+// ---- audio ----
+let audioCtx: AudioContext | null = null;
+let muted = false;
+function tone(
+  f0: number,
+  f1: number,
+  dur: number,
+  type: OscillatorType,
+  vol: number,
+  delay = 0
+) {
+  if (muted) return;
+  try {
+    audioCtx = audioCtx || new AudioContext();
+    if (audioCtx.state === "suspended") void audioCtx.resume();
+    const t0 = audioCtx.currentTime + delay;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(f0, t0);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(1, f1), t0 + dur);
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.exponentialRampToValueAtTime(vol, t0 + 0.012);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start(t0);
+    osc.stop(t0 + dur + 0.02);
+  } catch {
+    /* audio unsupported */
+  }
 }
 
 function BoardList({
@@ -1695,11 +1584,11 @@ function BoardPanel({
       <p className="mb-2 font-hand text-lg text-foreground">
         leaderboard{" "}
         <span className="text-faint">
-          Â· {leaderboardEnabled ? "every visitor" : "this device"}
+          · {leaderboardEnabled ? "every visitor" : "this device"}
         </span>
       </p>
       {state === "loading" && (
-        <p className="font-hand text-lg text-faint">loadingâ€¦</p>
+        <p className="font-hand text-lg text-faint">loading…</p>
       )}
       {state === "error" && (
         <p className="font-hand text-lg text-muted">
@@ -1714,23 +1603,17 @@ function BoardPanel({
 export default function Game() {
   const hostRef = useRef<HTMLDivElement>(null);
   const handlesRef = useRef<GameHandles | null>(null);
-  const [ui, setUi] = useState<UiState>(() =>
-    typeof window !== "undefined" && !detectWebGL()
-      ? "unsupported"
-      : "ready"
-  );
+  const [ui, setUi] = useState<UiState>("ready");
   const [hud, setHud] = useState<Hud>({
     score: 0,
     coins: 0,
     best: 0,
-    speed: START_SPEED,
+    speed: 1,
     mult: 1,
     shield: false,
     magnet: false,
     x2: false,
   });
-  const skipWeb = ui === "unsupported";
-
   const [name, setName] = useState<string>(() =>
     typeof window !== "undefined" ? getSavedName() : ""
   );
@@ -1747,37 +1630,31 @@ export default function Game() {
   useEffect(() => {
     const host = hostRef.current;
     if (!host) return;
-    if (skipWeb) return;
     let disposed = false;
-    let destroy: (() => void) | null = null;
-    try {
-      destroy = buildGame(host, {
-        onUi: (s) => {
-          if (!disposed) setUi(s);
-        },
-        onHud: (h) => {
-          if (!disposed) setHud(h);
-        },
-        setHandles: (h) => {
-          handlesRef.current = h;
-        },
-      });
-    } catch {
-      console.warn("Paper Runner failed to start:", new Error().stack);
-    }
+    const destroy = buildGame(host, {
+      onUi: (s) => {
+        if (!disposed) setUi(s);
+      },
+      onHud: (h) => {
+        if (!disposed) setHud(h);
+      },
+      setHandles: (h) => {
+        handlesRef.current = h;
+      },
+    });
     return () => {
       disposed = true;
       handlesRef.current = null;
-      destroy?.();
+      destroy();
     };
-  }, [skipWeb]);
+  }, []);
 
   useEffect(() => {
     nameRef.current = name;
     storeName(name);
   }, [name]);
 
-useEffect(() => {
+  useEffect(() => {
     let active = true;
     const refresh = async () => {
       try {
@@ -1799,7 +1676,7 @@ useEffect(() => {
   }, []);
 
   useEffect(() => {
-    if (ui !== "over") return;
+    if (ui !== "over" && ui !== "win") return;
     const score = hud.score;
     if (score <= 0 || lastSubmittedRef.current === score) return;
     lastSubmittedRef.current = score;
@@ -1813,7 +1690,6 @@ useEffect(() => {
         const list = await fetchLeaderboard(8);
         if (!active) return;
         setBoard(list);
-        setBoardState("ready");
       } catch {
         if (!active) return;
         setSaveState("failed");
@@ -1824,279 +1700,214 @@ useEffect(() => {
     };
   }, [ui, hud.score, hud.coins]);
 
-  const btn =
-    "rounded-full border-2 border-foreground bg-foreground px-6 py-2 font-hand text-xl font-medium text-background transition-transform hover:-translate-y-0.5 hover:rotate-1 hover:bg-accent hover:border-accent";
+  const chips = [
+    ["score", String(hud.score)],
+    ["coins", `${hud.coins}¢`],
+    ["best", String(hud.best)],
+    ["level", String(hud.speed)],
+  ];
 
   return (
-    <section className="mx-auto max-w-6xl px-4 pb-12 sm:px-6">
-      <div className="mb-6 flex flex-col items-center gap-1 text-center">
-        <h1 className="font-hand text-4xl font-semibold tracking-tight sm:text-5xl">
-          Paper <span className="text-gradient">Runner</span>
-        </h1>
-        <p className="font-hand text-xl text-muted">
-          a doodle-speed endless runner Â· chain combos, grab power-ups, own the
-          ink
-        </p>
-      </div>
-
-      <div
-        ref={hostRef}
-        className="relative h-[460px] w-full touch-none select-none overflow-hidden rounded-2xl border-2 border-borderish bg-background shadow-[0_20px_50px_-20px_rgba(60,50,30,0.45)] sm:h-[560px]"
-        style={{ touchAction: "none" }}
-        onPointerDown={(e) => {
-          const h = handlesRef.current;
-          if (!h) return;
-          const rect = e.currentTarget.getBoundingClientRect();
-          const x = e.clientX - rect.left;
-          if (ui === "playing") {
-            if (x < rect.width * 0.12) h.lane(-1);
-            else if (x > rect.width * 0.88) h.lane(1);
-            else h.jump();
-          } else if (ui === "ready" || ui === "over") {
-            h.start();
-          } else if (ui === "paused") {
-            h.resume();
-          }
-        }}
-      >
+    <div className="relative mx-auto max-w-6xl px-4">
+      <div className="overflow-hidden rounded-2xl border-2 border-dashed border-borderish bg-background shadow-sm">
         <div
-          className="pointer-events-none absolute inset-0 z-[1]"
-          style={{
-            background:
-              "radial-gradient(ellipse at center, transparent 55%, rgba(33,31,26,0.16) 100%)",
-          }}
-        />
-
-        {ui === "unsupported" && (
-          <div className="absolute inset-0 z-10 grid place-items-center p-6 text-center">
-            <p className="font-hand text-2xl text-muted">
-              Let&apos;s keep it 2D â€” your browser can&apos;t do WebGL.
-            </p>
-          </div>
-        )}
-
-        {ui !== "unsupported" && ui === "ready" && (
-          <div className="absolute inset-0 z-10 grid place-items-center overflow-y-auto bg-background/50 p-4 backdrop-blur-[2px]">
-            <div className="max-h-full w-full max-w-sm overflow-y-auto rounded-2xl border-2 border-borderish bg-surface p-6 text-center shadow-[0_16px_40px_-16px_rgba(60,50,30,0.5)]">
-              <p className="font-hand text-2xl leading-snug text-foreground">
-                Dodge the ink, jump the bars,
-                <br />
-                <span className="text-accent">chain coins for combos.</span>
-              </p>
-              <div className="mx-auto mt-3 max-w-[260px] space-y-1 text-left font-sans text-sm text-muted">
-                <p>â† â†’ / A D â€” switch lane</p>
-                <p>â†‘ / W / Space â€” jump Â· tap to jump</p>
-                <p>P / Esc â€” pause Â· M â€” sound</p>
-              </div>
-              <div className="mx-auto mt-3 flex max-w-[260px] flex-wrap items-center justify-center gap-x-3 gap-y-1 font-sans text-xs text-muted">
-                <span className="text-accent">ring=shield</span>
-                <span className="text-[#b97f1d]">ball=magnet Â· pillar=x2</span>
-              </div>
-              <label className="mt-4 block text-left font-sans text-xs text-muted">
-                your name
-                <input
-                  value={name}
-                  onChange={(e) =>
-                    setName(e.target.value.replace(/[\u0000-\u001f\u007f]/g, ""))
-                  }
-                  onPointerDown={(e) => e.stopPropagation()}
-                  maxLength={18}
-                  placeholder="anonymous"
-                  className="mt-1 w-full rounded-lg border-2 border-borderish bg-background/60 px-3 py-1.5 font-hand text-lg text-foreground outline-none transition-colors focus:border-accent/50"
-                />
-              </label>
-              <button
-                onPointerDown={(e) => e.stopPropagation()}
-                onClick={() => handlesRef.current?.start()}
-                className={`${btn} mt-4`}
+          className="relative aspect-[16/9] w-full sm:aspect-auto sm:h-[540px]"
+          ref={hostRef}
+        >
+          <div className="absolute left-3 top-3 z-10 flex flex-wrap items-center gap-1.5">
+            {chips.map(([label, value]) => (
+              <span
+                key={label}
+                className="rounded-full border border-accent/30 bg-background/80 px-2.5 py-0.5 font-hand text-lg text-foreground backdrop-blur-sm"
               >
-                Start running
-              </button>
-              <p className="mt-3 font-hand text-lg text-faint">
-                best so far: {hud.best}
-              </p>
-              <div className="mt-4">
-                <BoardPanel state={boardState} list={board} current={sanitizeName(name)} />
-                {!leaderboardEnabled && (
-                  <p className="mt-2 font-sans text-[11px] text-faint">
-                    add Supabase keys (.env.local) to compete with every
-                    visitor
-                  </p>
-                )}
-              </div>
-            </div>
+                {label} <span className="text-muted">{value}</span>
+              </span>
+            ))}
           </div>
-        )}
-
-        {ui !== "unsupported" && ui === "paused" && (
-          <div className="absolute inset-0 z-10 grid place-items-center bg-background/60 backdrop-blur-[2px]">
-            <div className="rounded-2xl border-2 border-borderish bg-surface p-6 text-center shadow-[0_16px_40px_-16px_rgba(60,50,30,0.5)]">
-              <p className="font-hand text-4xl text-foreground">paused</p>
-              <div className="mt-4 flex gap-3">
-                <button
-                  onPointerDown={(e) => e.stopPropagation()}
-                  onClick={() => handlesRef.current?.resume()}
-                  className={btn}
-                >
-                  Keep going
-                </button>
-                <button
-                  onPointerDown={(e) => e.stopPropagation()}
-                  onClick={() => handlesRef.current?.start()}
-                  className="rounded-full border-2 border-borderish bg-surface px-6 py-2 font-hand text-xl text-muted transition-transform hover:-translate-y-0.5"
-                >
-                  Restart
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {ui !== "unsupported" && ui === "over" && (
-          <div className="absolute inset-0 z-10 grid place-items-center overflow-y-auto bg-background/60 p-4 backdrop-blur-[2px]">
-            <div className="max-h-full w-full max-w-sm overflow-y-auto rounded-2xl border-2 border-borderish bg-surface p-6 text-center shadow-[0_16px_40px_-16px_rgba(60,50,30,0.5)]">
-              <p className="font-hand text-5xl text-ink-red">smacked!</p>
-              <div className="mt-2 flex items-baseline justify-center gap-5">
-                <p className="font-hand text-2xl text-foreground">
-                  score{" "}
-                  <span className="text-accent">{hud.score}</span>
-                </p>
-                <p className="font-hand text-xl text-muted">
-                  best <span className="text-foreground">{hud.best}</span>
-                </p>
-              </div>
-              <p className="font-sans text-sm text-muted">
-                coins collected: {hud.coins}
-              </p>
-              <label className="mt-4 block text-left font-sans text-xs text-muted">
-                your name
-                <input
-                  value={name}
-                  onChange={(e) =>
-                    setName(e.target.value.replace(/[\u0000-\u001f\u007f]/g, ""))
-                  }
-                  onPointerDown={(e) => e.stopPropagation()}
-                  maxLength={18}
-                  placeholder="anonymous"
-                  className="mt-1 w-full rounded-lg border-2 border-borderish bg-background/60 px-3 py-1.5 font-hand text-lg text-foreground outline-none transition-colors focus:border-accent/50"
-                />
-              </label>
-              <div className="mb-2 mt-2 min-h-[1.5rem] font-hand text-lg">
-                {saveState === "saving" && (
-                  <span className="text-muted">saving your runâ€¦</span>
-                )}
-                {saveState === "saved" && (
-                  <span className="text-accent">score saved â€” world called, it&apos;s jealous</span>
-                )}
-                {saveState === "failed" && (
-                  <span className="text-ink-red">couldn&apos;t save â€” check your internet</span>
-                )}
-              </div>
-              <button
-                onPointerDown={(e) => e.stopPropagation()}
-                onClick={() => handlesRef.current?.start()}
-                className={`${btn} mt-1`}
-              >
-                Run it back
-              </button>
-              <div className="mt-4">
-                <BoardPanel state={boardState} list={board} current={sanitizeName(name)} />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {ui !== "unsupported" && (ui === "playing" || ui === "paused") && (
-          <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-start justify-between p-3 sm:p-4">
-            <div className="flex items-center gap-2">
-              <div className="rounded-lg border border-borderish bg-surface/80 px-3 py-1.5 backdrop-blur-sm">
-                <span className="font-hand text-2xl text-foreground">
-                  {hud.score}
-                </span>
-                <span className="ml-2 font-hand text-lg text-faint">
-                  {hud.coins}Â¢ Â· {hud.speed.toFixed(1)}x
-                </span>
-              </div>
-              {hud.mult > 1 && (
-                <span className="rounded-lg border-2 border-accent/40 bg-accent/10 px-2 py-1 font-hand text-lg text-accent-2">
-                  x{hud.mult}
-                </span>
-              )}
-              <div className="flex flex-col gap-1">
-                {hud.shield && (
-                  <span className="rounded-md border border-accent/40 bg-surface/80 px-2 py-0.5 font-sans text-[11px] text-accent-2 backdrop-blur-sm">
-                    shield
-                  </span>
-                )}
-                {hud.magnet && (
-                  <span className="rounded-md border border-[#b97f1d]/50 bg-surface/80 px-2 py-0.5 font-sans text-[11px] text-[#8a5f14] backdrop-blur-sm">
-                    magnet
-                  </span>
-                )}
-                {hud.x2 && (
-                  <span className="rounded-md border border-[#b97f1d]/50 bg-surface/80 px-2 py-0.5 font-sans text-[11px] text-[#8a5f14] backdrop-blur-sm">
-                    x2
-                  </span>
-                )}
-              </div>
-            </div>
+          <div className="absolute right-3 top-3 z-10 flex gap-1.5">
             <button
-              onPointerDown={(e) => {
-                e.stopPropagation();
-                handlesRef.current?.togglePause();
+              type="button"
+              aria-label="toggle sound"
+              onClick={() => {
+                muted = !muted;
               }}
-              className="pointer-events-auto rounded-lg border border-borderish bg-surface/80 px-3 py-1.5 font-hand text-lg text-muted backdrop-blur-sm transition-colors hover:text-foreground"
+              className="rounded-full border border-accent/30 bg-background/80 px-2.5 py-0.5 font-hand text-lg text-accent transition-colors hover:bg-accent/10"
             >
-              {ui === "paused" ? "play" : "pause"}
+              {muted ? "🔇" : "🔊"}
+            </button>
+            <button
+              type="button"
+              aria-label="pause"
+              onClick={() => handlesRef.current?.togglePause()}
+              className="rounded-full border border-accent/30 bg-background/80 px-2.5 py-0.5 font-hand text-lg text-accent transition-colors hover:bg-accent/10"
+            >
+              {ui === "paused" ? "▶" : "⏸"}
             </button>
           </div>
-        )}
 
-        {ui !== "unsupported" && ui === "playing" && (
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex items-end justify-between p-4 sm:hidden">
-            <div className="pointer-events-auto flex gap-4">
+          {/* on-canvas controls for touch */}
+          {(ui === "playing" || ui === "paused") && (
+            <>
               <button
-                aria-label="Move left"
+                type="button"
+                aria-label="run left"
                 onPointerDown={(e) => {
                   e.preventDefault();
-                  e.stopPropagation();
                   handlesRef.current?.lane(-1);
                 }}
-                className="grid h-16 w-16 place-items-center rounded-full border-2 border-foreground/30 bg-surface/70 font-hand text-3xl text-foreground backdrop-blur-sm active:scale-95"
+                onPointerUp={() => handlesRef.current?.lane(0)}
+                onPointerLeave={() => handlesRef.current?.lane(0)}
+                onPointerCancel={() => handlesRef.current?.lane(0)}
+                className="absolute bottom-4 left-4 z-10 h-14 w-14 rounded-full border-2 border-dashed border-accent/40 bg-background/70 font-hand text-2xl text-accent backdrop-blur-sm select-none touch-none"
               >
-                â†
+                ◀
               </button>
               <button
-                aria-label="Move right"
+                type="button"
+                aria-label="run right"
                 onPointerDown={(e) => {
                   e.preventDefault();
-                  e.stopPropagation();
                   handlesRef.current?.lane(1);
                 }}
-                className="grid h-16 w-16 place-items-center rounded-full border-2 border-foreground/30 bg-surface/70 font-hand text-3xl text-foreground backdrop-blur-sm active:scale-95"
+                onPointerUp={() => handlesRef.current?.lane(0)}
+                onPointerLeave={() => handlesRef.current?.lane(0)}
+                onPointerCancel={() => handlesRef.current?.lane(0)}
+                className="absolute bottom-4 left-20 z-10 h-14 w-14 rounded-full border-2 border-dashed border-accent/40 bg-background/70 font-hand text-2xl text-accent backdrop-blur-sm select-none touch-none"
               >
-                â†’
+                ▶
               </button>
+              <button
+                type="button"
+                aria-label="jump"
+                onPointerDown={(e) => {
+                  e.preventDefault();
+                  handlesRef.current?.jump();
+                }}
+                className="absolute bottom-4 right-4 z-10 h-14 w-14 rounded-full border-2 border-dashed border-gold/50 bg-background/70 font-hand text-2xl text-gold backdrop-blur-sm select-none touch-none"
+              >
+                ⤒
+              </button>
+            </>
+          )}
+
+          {ui === "ready" && (
+            <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/85 p-6 backdrop-blur-sm">
+              <div className="w-full max-w-sm rounded-2xl border-2 border-dashed border-borderish bg-surface p-6 text-center">
+                <p className="font-hand text-4xl font-bold text-foreground">
+                  paper runner
+                </p>
+                <p className="mt-1 font-hand text-xl text-muted">
+                  pen &amp; paper platformer
+                </p>
+                <p className="mt-4 text-lg leading-relaxed text-muted">
+                  stomp the ink blobs, snatch the <span className="text-gold">★ stars</span>,
+                  and leap the <span className="text-accent">∞ legend</span> at the end.
+                  five hand-drawn levels.
+                </p>
+                <input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  maxLength={18}
+                  placeholder="your name"
+                  aria-label="your name"
+                  className="mt-4 w-full rounded-xl border-2 border-dashed border-borderish bg-background px-4 py-2 text-center font-hand text-2xl text-foreground outline-none focus:border-accent/60"
+                />
+                <button
+                  type="button"
+                  onClick={() => handlesRef.current?.start()}
+                  className="mt-4 w-full rounded-xl border-2 border-dashed border-accent bg-accent/10 px-4 py-2 font-hand text-2xl font-semibold text-accent transition-colors hover:bg-accent/20"
+                >
+                  draw — start
+                </button>
+                <p className="mt-3 font-mono text-sm text-faint">
+                  arrows / WASD to run · space to jump
+                </p>
+              </div>
             </div>
-            <button
-              aria-label="Jump"
-              onPointerDown={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                handlesRef.current?.jump();
-              }}
-              className="pointer-events-auto grid h-20 w-20 place-items-center rounded-full border-2 border-foreground bg-accent font-hand text-3xl text-background shadow-[0_10px_24px_-10px_rgba(49,81,194,0.6)] active:scale-95"
-            >
-              â†‘
-            </button>
-          </div>
-        )}
+          )}
+
+          {ui === "paused" && (
+            <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/70 p-6 backdrop-blur-sm">
+              <div className="text-center">
+                <p className="font-hand text-4xl font-semibold text-foreground">paused</p>
+                <p className="mt-1 font-mono text-sm text-faint">space / P to resume</p>
+              </div>
+            </div>
+          )}
+
+          {ui === "over" && (
+            <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/85 p-6 backdrop-blur-sm">
+              <div className="w-full max-w-sm rounded-2xl border-2 border-dashed border-borderish bg-surface p-6 text-center">
+                <p className="font-hand text-5xl font-bold text-ink-red">splat!</p>
+                <p className="mt-2 text-lg text-muted">
+                  the ink ran out.
+                </p>
+                <p className="mt-2 font-hand text-2xl text-foreground">
+                  score <span className="text-accent">{hud.score}</span> · coins{" "}
+                  <span className="text-gold">{hud.coins}¢</span>
+                </p>
+                <p className="mt-1 font-mono text-sm text-faint">
+                  {saveState === "saving" && "saving score…"}
+                  {saveState === "saved" && "✓ saved to the board"}
+                  {saveState === "failed" && "couldn't save this run"}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => handlesRef.current?.start()}
+                  className="mt-4 w-full rounded-xl border-2 border-dashed border-accent bg-accent/10 px-4 py-2 font-hand text-2xl font-semibold text-accent transition-colors hover:bg-accent/20"
+                >
+                  draw again
+                </button>
+              </div>
+            </div>
+          )}
+
+          {ui === "win" && (
+            <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/85 p-6 backdrop-blur-sm">
+              <div className="w-full max-w-sm rounded-2xl border-2 border-dashed border-borderish bg-surface p-6 text-center">
+                <p className="font-hand text-5xl font-bold text-gold">
+                  the legend falls!
+                </p>
+                <p className="mt-2 text-lg text-muted">
+                  you jumped clean over ANANVAY PANDEY ∞ and finished every level.
+                </p>
+                <p className="mt-2 font-hand text-2xl text-foreground">
+                  score <span className="text-accent">{hud.score}</span> · coins{" "}
+                  <span className="text-gold">{hud.coins}¢</span>
+                </p>
+                <p className="mt-1 font-mono text-sm text-faint">
+                  {saveState === "saving" && "saving score…"}
+                  {saveState === "saved" && "✓ saved to the board"}
+                  {saveState === "failed" && "couldn't save this run"}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => handlesRef.current?.start()}
+                  className="mt-4 w-full rounded-xl border-2 border-dashed border-accent bg-accent/10 px-4 py-2 font-hand text-2xl font-semibold text-accent transition-colors hover:bg-accent/20"
+                >
+                  draw again
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
-      <p className="mt-4 text-center font-hand text-lg text-muted">
-        arrow keys / WASD to move Â· space to jump Â· chain coins for combo
-        multipliers Â· on mobile swipe & tap
-      </p>
-    </section>
+      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <div className="rounded-2xl border-2 border-dashed border-borderish bg-surface p-4">
+          <BoardPanel state={boardState} list={board} current={name} />
+        </div>
+        <div className="rounded-2xl border-2 border-dashed border-borderish bg-surface p-4">
+          <p className="mb-2 font-hand text-lg text-foreground">how to play</p>
+          <ul className="space-y-1 text-sm text-muted">
+            <li>· run with ← → / A D</li>
+            <li>· jump with space / ↑ / W</li>
+            <li>· land on ink blobs to stomp them</li>
+            <li>· the ∞ boss guards level 5 — jump over it</li>
+            <li>· grab ★ stars for coins &amp; score</li>
+          </ul>
+        </div>
+      </div>
+    </div>
   );
 }
