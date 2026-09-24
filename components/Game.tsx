@@ -172,78 +172,395 @@ function buildGame(
   glow.position.set(0, 3, 2);
   scene.add(glow);
 
-  function makePaperTexture(): THREE.CanvasTexture {
+  function makeRoadTexture(): THREE.CanvasTexture {
     const canvas = document.createElement("canvas");
     canvas.width = 512;
     canvas.height = 512;
     const g = canvas.getContext("2d");
     if (!g) throw new Error("no 2d context");
-    g.fillStyle = "#f3eddb";
+    const grad = g.createLinearGradient(0, 0, 512, 512);
+    grad.addColorStop(0, "#7b776d");
+    grad.addColorStop(1, "#6d6960");
+    g.fillStyle = grad;
     g.fillRect(0, 0, 512, 512);
-    for (let x = 0; x < 512; x += 24) {
-      for (let y = 0; y < 512; y += 24) {
-        if ((x + y) % 3 === 0) {
-          g.fillStyle = `rgba(140,120,80,${0.03 + Math.random() * 0.05})`;
-          g.fillRect(x + Math.random() * 14, y + Math.random() * 14, 2, 2);
-        }
+    for (let x = 0; x < 512; x += 10) {
+      for (let y = 0; y < 512; y += 10) {
+        g.fillStyle = `rgba(30,28,24,${0.02 + Math.random() * 0.05})`;
+        g.fillRect(x + Math.random() * 8, y + Math.random() * 8, 2, 2);
       }
     }
-    g.strokeStyle = "rgba(60,55,45,0.13)";
-    g.lineWidth = 1;
-    for (let y = 32; y < 512; y += 24) {
+    for (let i = 0; i < 14; i++) {
+      g.strokeStyle = `rgba(20,18,15,${0.05 + Math.random() * 0.05})`;
+      g.lineWidth = 1;
       g.beginPath();
-      g.moveTo(0, y + 0.5);
-      g.lineTo(512, y + 0.5);
+      const sx = Math.random() * 512;
+      g.moveTo(sx + Math.random() * 140, Math.random() * 512);
+      g.lineTo(sx + Math.random() * 140, Math.random() * 512);
       g.stroke();
     }
-    g.strokeStyle = "rgba(207,74,51,0.22)";
-    g.lineWidth = 2;
-    g.beginPath();
-    g.moveTo(66, 0);
-    g.lineTo(66, 512);
-    g.stroke();
-    g.fillStyle = "rgba(49,81,194,0.14)";
-    g.fillRect(188, 16, 14, 14);
-    g.fillRect(472, 196, 14, 14);
-    g.fillRect(120, 404, 14, 14);
-    g.strokeStyle = "rgba(60,55,45,0.18)";
-    g.lineWidth = 2;
-    g.beginPath();
-    g.arc(320, 256, 60, 0, Math.PI * 2);
-    g.stroke();
+    g.fillStyle = "rgba(255,255,255,0.06)";
+    for (let i = 0; i < 26; i++) {
+      g.beginPath();
+      g.arc(Math.random() * 512, Math.random() * 512, 1.2, 0, Math.PI * 2);
+      g.fill();
+    }
     const tex = new THREE.CanvasTexture(canvas);
     tex.wrapS = THREE.RepeatWrapping;
     tex.wrapT = THREE.RepeatWrapping;
-    tex.repeat.set(10, 44);
+    tex.repeat.set(9, 40);
     tex.anisotropy = 8;
     tex.colorSpace = THREE.SRGBColorSpace;
     return tex;
   }
 
-  const groundTex = makePaperTexture();
+  const groundTex = makeRoadTexture();
   const groundMat = new THREE.MeshStandardMaterial({
     map: groundTex,
     color: 0xffffff,
-    roughness: 0.95,
+    roughness: 0.96,
   });
   const ground = new THREE.Mesh(new THREE.PlaneGeometry(80, 320), groundMat);
   ground.rotation.x = -Math.PI / 2;
   ground.receiveShadow = true;
   scene.add(ground);
 
-  const laneLineMat = new THREE.MeshBasicMaterial({
-    color: 0x3151c2,
+  // ---- street dressing: sidewalk strips + kerbs ----
+  const sidewalkMat = new THREE.MeshStandardMaterial({
+    color: 0xd6d1bf,
+    roughness: 0.92,
+  });
+  const kerbMat = new THREE.MeshStandardMaterial({
+    color: 0xbfb8a8,
+    roughness: 0.85,
+  });
+  for (const sx of [-6, 6]) {
+    const side = new THREE.Mesh(new THREE.PlaneGeometry(4.4, 320), sidewalkMat);
+    side.rotation.x = -Math.PI / 2;
+    side.position.set(sx, 0.015, 0);
+    side.receiveShadow = true;
+    scene.add(side);
+    const kerb = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.34, 320), kerbMat);
+    kerb.position.set(sx, 0.17, 0);
+    scene.add(kerb);
+  }
+  // faded edge lines either side of the road
+  const edgeLineMat = new THREE.MeshBasicMaterial({
+    color: 0xfff7ea,
     transparent: true,
-    opacity: 0.08,
+    opacity: 0.22,
+  });
+  for (const x of [-4.6, 4.6]) {
+    const e = new THREE.Mesh(new THREE.PlaneGeometry(0.14, 320), edgeLineMat);
+    e.rotation.x = -Math.PI / 2;
+    e.position.set(x, 0.026, 0);
+    scene.add(e);
+  }
+
+  // ---- animated dashed lane dividers ----
+  const dashCanvas = document.createElement("canvas");
+  dashCanvas.width = 16;
+  dashCanvas.height = 64;
+  {
+    const g = dashCanvas.getContext("2d");
+    if (g) {
+      g.fillStyle = "#f6efdf";
+      g.fillRect(0, 0, 16, 64);
+      g.fillStyle = "rgba(0,0,0,0)";
+      g.clearRect(0, 22, 16, 20);
+    }
+  }
+  const dashTex = new THREE.CanvasTexture(dashCanvas);
+  dashTex.wrapS = THREE.RepeatWrapping;
+  dashTex.wrapT = THREE.RepeatWrapping;
+  dashTex.repeat.set(1, 9);
+  const dashMat = new THREE.MeshBasicMaterial({
+    map: dashTex,
+    transparent: true,
+    opacity: 0.55,
   });
   for (const x of LANE_BOUNDS) {
     const line = new THREE.Mesh(
-      new THREE.PlaneGeometry(0.05, 320),
-      laneLineMat
+      new THREE.PlaneGeometry(0.22, 62),
+      dashMat
     );
     line.rotation.x = -Math.PI / 2;
-    line.position.set(x, 0.02, 0);
+    line.position.set(x, 0.028, -24);
     scene.add(line);
+  }
+
+  // ---- roadside scenery pool (buildings / props / cars) ----
+  type StreetKind = "building" | "log" | "car" | "tree" | "cone" | "lamp";
+  type StreetItem = {
+    group: THREE.Object3D;
+    kind: StreetKind;
+    side: number;
+    xOff: number;
+    z: number;
+    par: number;
+    refill: () => void;
+  };
+  function windowTex(): THREE.CanvasTexture {
+    const c = document.createElement("canvas");
+    c.width = 128;
+    c.height = 192;
+    const g = c.getContext("2d");
+    if (!g) throw new Error("no 2d context");
+    g.fillStyle = "#d9d3c0";
+    g.fillRect(0, 0, 128, 192);
+    for (let row = 0; row < 4; row++) {
+      for (let col = 0; col < 4; col++) {
+        const wx = 10 + col * 30;
+        const wy = 14 + row * 46;
+        const lit = Math.random() < 0.3;
+        g.fillStyle = lit ? "#f7d96b" : "#6379a8";
+        g.fillRect(wx, wy, 18, 26);
+        g.fillStyle = "#5c5444";
+        g.fillRect(wx, wy, 2, 26);
+        g.fillRect(wx + 18, wy, 2, 26);
+        g.fillRect(wx + 8, wy, 2, 26);
+        g.fillRect(wx, wy + 13, 18, 2);
+      }
+    }
+    g.strokeStyle = "rgba(90,82,66,0.5)";
+    g.lineWidth = 2;
+    g.beginPath();
+    g.moveTo(0, 192);
+    g.lineTo(128, 192);
+    g.stroke();
+    const tex = new THREE.CanvasTexture(c);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    tex.anisotropy = 4;
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
+  }
+  const buildingWinTex = windowTex();
+  const buildingMatS = new THREE.MeshStandardMaterial({
+    map: buildingWinTex,
+    color: 0xffffff,
+    roughness: 0.92,
+  });
+  const buildingMatSlim = new THREE.MeshStandardMaterial({
+    color: 0xc9c3b0,
+    roughness: 0.95,
+  });
+  const buildingUnit = new THREE.BoxGeometry(1, 1, 1);
+  function makeBuilding(): THREE.Group {
+    const grp = new THREE.Group();
+    const w = 5.5 + Math.random() * 4;
+    const h = 7 + Math.random() * 13;
+    const d = 4 + Math.random() * 2;
+    const box = new THREE.Mesh(buildingUnit, buildingMatS);
+    box.scale.set(w, h, d);
+    box.position.y = h / 2;
+    box.receiveShadow = true;
+    grp.add(box);
+    const cap = new THREE.Mesh(buildingUnit, buildingMatSlim);
+    cap.scale.set(w + 0.6, 0.8, d + 0.6);
+    cap.position.y = h + 0.25;
+    grp.add(cap);
+    const taller = h > 14;
+    if (taller) {
+      for (let i = 0; i < 3; i++) {
+        const ac = new THREE.Mesh(buildingUnit, buildingMatSlim);
+        ac.scale.set(0.9, 3.4, 0.9);
+        ac.position.set(-w / 2 + (i + 0.5) * (w / 3), h + 3, 0);
+        grp.add(ac);
+      }
+    }
+    grp.userData.clear = () => {
+      box.scale.set(5.5 + Math.random() * 4, 7 + Math.random() * 13, 4 + Math.random() * 2);
+      box.position.y = box.scale.y / 2;
+      cap.scale.set(box.scale.x + 0.6, 0.8, box.scale.z + 0.6);
+      cap.position.y = box.scale.y + 0.25;
+      for (const ch of grp.children) {
+        if (ch === box) continue;
+        if (ch === cap) continue;
+        (ch as THREE.Mesh).visible = box.scale.y > 14;
+      }
+    };
+    return grp;
+  }
+
+  const carBodyMat = new THREE.MeshStandardMaterial({
+    color: COLORS.red,
+    roughness: 0.35,
+    metalness: 0.25,
+  });
+  const carCabMat = new THREE.MeshStandardMaterial({
+    color: 0xe8e4d8,
+    roughness: 0.4,
+  });
+  const carWheelGeo = new THREE.CylinderGeometry(0.32, 0.32, 0.22, 12);
+  carWheelGeo.rotateX(Math.PI / 2);
+  const carUnit = new THREE.BoxGeometry(1, 1, 1);
+  const carPalette = [0xcf4a33, 0x3151c2, 0xf2c14e, 0x211f1a, 0xf5efe2, 0x7ea27f];
+  function makeCar(): THREE.Group {
+    const grp = new THREE.Group();
+    const body = new THREE.Mesh(carUnit, carBodyMat);
+    body.scale.set(1.5, 0.62, 3.1);
+    body.position.y = 0.55;
+    body.castShadow = true;
+    grp.add(body);
+    const cab = new THREE.Mesh(carUnit, carCabMat);
+    cab.scale.set(1.3, 0.5, 1.5);
+    cab.position.set(0, 1.0, -0.25);
+    grp.add(cab);
+    const mk = new THREE.Mesh(carUnit, carBodyMat);
+    mk.scale.set(0.18, 0.62, 3.14);
+    mk.position.set(0, 0.55, 0);
+    grp.add(mk);
+    const headGeo = new THREE.BoxGeometry(1.4, 0.3, 0.1);
+    const headMat = new THREE.MeshBasicMaterial({ color: 0xfff3c4 });
+    const head = new THREE.Mesh(headGeo, headMat);
+    head.position.set(0, 0.6, 1.58);
+    grp.add(head);
+    const tailMat = new THREE.MeshBasicMaterial({ color: 0xcf4a33 });
+    const tail = new THREE.Mesh(headGeo, tailMat);
+    tail.position.set(0, 0.7, -1.58);
+    grp.add(tail);
+    for (const sx of [-0.62, 0.62]) {
+      for (const sz of [-0.95, 0.95]) {
+        const wheel = new THREE.Mesh(carWheelGeo, new THREE.MeshStandardMaterial({
+          color: 0x211f1a,
+          roughness: 0.9,
+        }));
+        wheel.position.set(sx, 0.32, sz);
+        grp.add(wheel);
+      }
+    }
+    grp.userData.clear = () => {
+      const col = carPalette[Math.floor(Math.random() * carPalette.length)];
+      (body.material as THREE.MeshStandardMaterial).color.setHex(col);
+      (mk.material as THREE.MeshStandardMaterial).color.setHex(col);
+    };
+    return grp;
+  }
+
+  const logCyl = new THREE.CylinderGeometry(0.42, 0.42, 2.4, 10);
+  logCyl.rotateZ(Math.PI / 2);
+  const logMat = new THREE.MeshStandardMaterial({
+    color: 0x8a6a45,
+    roughness: 0.9,
+  });
+  const logEndMat = new THREE.MeshStandardMaterial({
+    color: 0xe0c58f,
+    roughness: 0.9,
+  });
+  function makeLogs(): THREE.Group {
+    const grp = new THREE.Group();
+    for (let i = 0; i < 3; i++) {
+      const lg = new THREE.Mesh(logCyl, logMat);
+      lg.position.set(Math.random() * 0.5, 0.5 + i * 0.85, Math.random() * 1.2);
+      lg.castShadow = true;
+      grp.add(lg);
+    }
+    for (let i = 0; i < 2; i++) {
+      const hollow = new THREE.Mesh(logCyl, logEndMat);
+      hollow.scale.set(1, 1, 1.02);
+      hollow.position.set(0.4 + i * 1.6, 0.5 + i * 0.9, 0);
+      grp.add(hollow);
+    }
+    grp.userData.clear = () => undefined;
+    return grp;
+  }
+
+  const trunkGeo = new THREE.CylinderGeometry(0.22, 0.3, 1.4, 8);
+  const treeMat = new THREE.MeshStandardMaterial({ color: 0x6b4f34, roughness: 0.9 });
+  const leafMat = new THREE.MeshStandardMaterial({ color: 0x4e7a5e, roughness: 0.95 });
+  function makeTree(): THREE.Group {
+    const grp = new THREE.Group();
+    const trunk = new THREE.Mesh(trunkGeo, treeMat);
+    trunk.position.y = 0.7;
+    grp.add(trunk);
+    for (let i = 0; i < 3; i++) {
+      const leaf = new THREE.Mesh(new THREE.SphereGeometry(1.1 - i * 0.15, 12, 10), leafMat);
+      leaf.position.set((i - 1) * 0.5, 1.9 + i * 0.5, 0);
+      leaf.scale.y = 0.85;
+      grp.add(leaf);
+    }
+    grp.userData.clear = () => undefined;
+    return grp;
+  }
+
+  const coneMat = new THREE.MeshStandardMaterial({
+    color: COLORS.red,
+    roughness: 0.6,
+  });
+  const coneStripMat = new THREE.MeshStandardMaterial({
+    color: 0xf6f1e3,
+    roughness: 0.6,
+  });
+  function makeCone(): THREE.Group {
+    const grp = new THREE.Group();
+    const c = new THREE.Mesh(new THREE.ConeGeometry(0.34, 0.85, 12), coneMat);
+    c.position.y = 0.42;
+    const s = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.08, 0.5), coneStripMat);
+    s.position.y = 0.5;
+    grp.add(c, s);
+    grp.userData.clear = () => undefined;
+    return grp;
+  }
+
+  const lampPoleMat = new THREE.MeshStandardMaterial({ color: 0x3a3f4b, roughness: 0.7 });
+  const lampHeadMat = new THREE.MeshBasicMaterial({ color: 0xfff3c4 });
+  function makeLamp(): THREE.Group {
+    const grp = new THREE.Group();
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.12, 5, 8), lampPoleMat);
+    pole.position.y = 2.5;
+    grp.add(pole);
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.1, 0.1), lampPoleMat);
+    arm.position.set(0.6, 4.9, 0);
+    grp.add(arm);
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.22, 0.3), lampHeadMat);
+    head.position.set(1.2, 4.78, 0);
+    grp.add(head);
+    grp.userData.clear = () => undefined;
+    return grp;
+  }
+
+  function makeItem(kind: StreetKind, side: number): StreetItem {
+    const grp =
+      kind === "building" ? makeBuilding()
+      : kind === "car" ? makeCar()
+      : kind === "log" ? makeLogs()
+      : kind === "tree" ? makeTree()
+      : kind === "cone" ? makeCone()
+      : makeLamp();
+    scene.add(grp);
+    const item: StreetItem = {
+      group: grp,
+      kind,
+      side,
+      xOff: kind === "building" ? 13 + Math.random() * 7 : 6.4 + Math.random() * 2.6,
+      z: -30 - Math.random() * 260,
+      par: kind === "building" ? 0.82 : kind === "car" ? 0.94 : 1,
+      refill: () => {
+        grp.userData.clear?.();
+        item.xOff =
+          item.kind === "building"
+            ? 13 + Math.random() * 7
+            : 6.4 + Math.random() * 2.6;
+        grp.position.set(item.side * item.xOff, 0, item.z);
+      },
+    };
+    item.group.position.set(item.side * item.xOff, 0, item.z);
+    return item;
+  }
+  const streetItems: StreetItem[] = [];
+  for (let i = 0; i < 12; i++) {
+    streetItems.push(makeItem("building", i % 2 === 0 ? -1 : 1));
+  }
+  for (let i = 0; i < 7; i++) {
+    streetItems.push(makeItem(i % 2 === 0 ? "log" : "tree", i % 2 === 0 ? -1 : 1));
+  }
+  streetItems.push(makeItem("cone", -1));
+  streetItems.push(makeItem("cone", 1));
+  for (let i = 0; i < 4; i++) {
+    streetItems.push(makeItem("car", i % 2 === 0 ? -1 : 1));
+  }
+  for (let i = 0; i < 4; i++) {
+    streetItems.push(makeItem("lamp", i % 2 === 0 ? -1 : 1));
   }
 
   const mountCanvas = document.createElement("canvas");
@@ -1443,6 +1760,20 @@ function buildGame(
           (Math.random() < 0.5 ? 8.5 + Math.random() * 5 : 13 + Math.random() * 10);
       }
     }
+
+    // roadside scenery stream
+    for (const it of streetItems) {
+      it.z += parallax * it.par * dt;
+      if (it.z > 10) {
+        it.z -= 280;
+        it.refill();
+      }
+      it.group.position.z = it.z;
+    }
+    // animated lane dashes
+    const dTex = dashMat.map as THREE.CanvasTexture;
+    dTex.offset.y = (dTex.offset.y || 0) - parallax * 0.05 * dt;
+    if (dTex.offset.y < 0) dTex.offset.y += 1;
 
     shakeT = Math.max(0, shakeT - dt);
     const sh = shakeT > 0 ? shakeMag * shakeT * 6 : 0;
