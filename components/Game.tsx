@@ -421,9 +421,9 @@ function buildGame(
     return Math.floor(px / TILE);
   }
   function isSolid(tx: number, ty: number) {
-    if (ty >= GROUND_TOP) return false; // treated via grid below
     if (tx < 0 || ty < 0) return false;
     if (tx >= worldW) return true;
+    if (ty >= ROWS) return false;
     return solid[ty * worldW + tx] === true;
   }
 
@@ -685,22 +685,25 @@ function buildGame(
       }
     }
 
-    // ---- flag ----
-    const flagPx = flagTX * TILE + TILE / 2;
-    if (pcx > flagPx - 14 && clearT < 0 && deadT <= 0) {
-      if (!wonBoss || LEVELS[levelIndex].boss !== true) {
-        clearT = 1.8;
-        score += 500;
-        tone(523, 1046, 0.25, "triangle", 0.11);
-        tone(659, 1318, 0.25, "triangle", 0.11, 0.1);
-        tone(784, 1568, 0.4, "triangle", 0.12, 0.2);
-      } else {
-        wonBoss = false;
-        bossPassed = true;
-        score += 2500;
-        coins += 10;
-        tone(120, 880, 0.8, "square", 0.14);
-        toast("YOU BEAT THE LEGEND ∞!");
+    // ---- next-level gate ----
+    const doorPx = flagTX * TILE - 1.5 * TILE;
+    if (clearT < 0 && deadT <= 0) {
+      if (pcx > doorPx - 24 && pcx < doorPx + 24) {
+        const bossOk = LEVELS[levelIndex].boss !== true || wonBoss || bossPassed;
+        if (!bossOk) {
+          toast("defeat the ∞ legend first!");
+          if (Math.abs(pcx - doorPx) < 14) {
+            vx = -(Math.sign(vx) || 1) * RUN;
+            tone(160, 90, 0.2, "square", 0.09);
+          }
+        } else {
+          clearT = 1.8;
+          score += 500;
+          runPhase = 0;
+          tone(523, 1046, 0.25, "triangle", 0.11);
+          tone(659, 1318, 0.25, "triangle", 0.11, 0.1);
+          tone(784, 1568, 0.4, "triangle", 0.12, 0.2);
+        }
       }
     }
 
@@ -1164,6 +1167,61 @@ function buildGame(
     ctx.fill();
   }
 
+  function drawGate(t: number) {
+    const dx = flagTX * TILE - 1.5 * TILE;
+    const baseY = GROUND_TOP * TILE;
+    const bw = TILE * 0.8;
+    const bh = TILE * 2.3;
+    ctx.save();
+    // arch frame
+    ctx.fillStyle = "rgba(232,165,58,0.2)";
+    ctx.beginPath();
+    ctx.roundRect(dx - bw / 2 - 6, baseY - bh - 6, bw + 12, bh + 6, 6);
+    ctx.fill();
+    rectSketch(dx - bw / 2 - 6, baseY - bh - 6, bw + 12, bh + 6, COLORS.gold, 90, t);
+    // door
+    ctx.fillStyle = "#f3e3bd";
+    ctx.beginPath();
+    ctx.roundRect(dx - bw / 2, baseY - bh, bw, bh, 3);
+    ctx.fill();
+    rectSketch(dx - bw / 2, baseY - bh, bw, bh, "rgba(58,63,75,0.75)", 91, t);
+    // planks
+    ctx.strokeStyle = "rgba(58,63,75,0.3)";
+    ctx.lineWidth = 1.2;
+    for (let i = 1; i < 4; i++) {
+      strokeLine(
+        dx - bw / 2 + 2,
+        baseY - (bh * i) / 4,
+        dx + bw / 2 - 2,
+        baseY - (bh * i) / 4,
+        "rgba(58,63,75,0.4)",
+        1.1,
+        100 + i,
+        t
+      );
+    }
+    // cross planks
+    ctx.strokeStyle = "rgba(58,63,75,0.3)";
+    strokeLine(dx + 2, baseY - bh + 3, dx + 2, baseY - 3, "rgba(58,63,75,0.35)", 1.1, 104, t);
+    strokeLine(dx - 2, baseY - bh + 3, dx - 2, baseY - 3, "rgba(58,63,75,0.35)", 1.1, 105, t);
+    // knob
+    ctx.fillStyle = COLORS.goldDark;
+    ctx.beginPath();
+    ctx.arc(dx + bw / 2 - 6, baseY - bh / 2, 3, 0, Math.PI * 2);
+    ctx.fill();
+    // sign
+    const bounce = Math.abs(Math.sin(t * 2.4)) * 6;
+    const last = levelIndex === LEVELS.length - 1;
+    ctx.fillStyle = "#fffdf6";
+    ctx.font = "600 16px Caveat, cursive";
+    ctx.textAlign = "center";
+    ctx.fillText(last ? "THE LEGEND ∞" : `NEXT LEVEL ${levelIndex + 2}`, dx, baseY - bh - 24 - bounce);
+    ctx.fillStyle = COLORS.red;
+    ctx.font = "600 14px Caveat, cursive";
+    ctx.fillText(last ? "DEFEAT & WIN!" : "⬇ RUN IN", dx, baseY - 6 - bounce);
+    ctx.restore();
+  }
+
   function drawBoss(t: number) {
     const bx = bossX * TILE + TILE / 2;
     const baseY = GROUND_TOP * TILE;
@@ -1301,6 +1359,7 @@ function buildGame(
     }
     for (const c of coinsA) drawCoin(c, flashT, false);
     for (const e of enemies) drawEnemy(e, flashT);
+    drawGate(flashT);
     drawFlag(flashT);
     drawPlayer(flashT);
 
