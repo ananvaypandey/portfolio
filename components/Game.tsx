@@ -2,6 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
+import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
+import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
+import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass.js";
+import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
+import { VignetteShader } from "three/examples/jsm/shaders/VignetteShader.js";
 import {
   fetchLeaderboard,
   submitScore,
@@ -111,8 +117,9 @@ function buildGame(
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.setSize(host.clientWidth, host.clientHeight);
   renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.12;
+  renderer.toneMappingExposure = 1.22;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.domElement.style.display = "block";
   host.appendChild(renderer.domElement);
@@ -136,9 +143,10 @@ function buildGame(
     const g = skyCanvas.getContext("2d");
     if (g) {
       const grad = g.createLinearGradient(0, 0, 0, 512);
-      grad.addColorStop(0, "#dfe6f5");
-      grad.addColorStop(0.55, "#eef0e0");
-      grad.addColorStop(1, "#f6f1e3");
+      grad.addColorStop(0, "#bcd2f2");
+      grad.addColorStop(0.45, "#e9ecdf");
+      grad.addColorStop(0.8, "#fdf6e3");
+      grad.addColorStop(1, "#f8f0da");
       g.fillStyle = grad;
       g.fillRect(0, 0, 2, 512);
     }
@@ -151,12 +159,14 @@ function buildGame(
   );
   scene.add(sky);
 
-  scene.add(new THREE.HemisphereLight(0xfff6e8, 0xb9c9e8, 0.9));
-  const sun = new THREE.DirectionalLight(0xfff0d6, 2.2);
+  scene.add(new THREE.HemisphereLight(0xfff6e8, 0xc8d6ee, 1.05));
+  const amb = new THREE.AmbientLight(0xfff1dc, 0.35);
+  scene.add(amb);
+  const sun = new THREE.DirectionalLight(0xfff3dd, 2.8);
   sun.position.set(7, 14, 10);
   sun.castShadow = true;
-  sun.shadow.mapSize.set(2048, 2048);
-  sun.shadow.radius = 7;
+  sun.shadow.mapSize.set(4096, 4096);
+  sun.shadow.radius = 12;
   sun.shadow.camera.left = -16;
   sun.shadow.camera.right = 16;
   sun.shadow.camera.top = 18;
@@ -172,23 +182,54 @@ function buildGame(
   glow.position.set(0, 3, 2);
   scene.add(glow);
 
+  const renderTarget = new THREE.WebGLRenderTarget(
+    host.clientWidth,
+    host.clientHeight,
+    { samples: 4 }
+  );
+  const composer = new EffectComposer(renderer, renderTarget);
+  composer.addPass(new RenderPass(scene, camera));
+  const bloom = new UnrealBloomPass(
+    new THREE.Vector2(host.clientWidth, host.clientHeight),
+    0.45,
+    0.55,
+    0.82
+  );
+  composer.addPass(bloom);
+  composer.addPass(new OutputPass());
+  const vignette = new ShaderPass(VignetteShader);
+  vignette.uniforms["offset"].value = 0.55;
+  vignette.uniforms["darkness"].value = 0.42;
+  composer.addPass(vignette);
+
   function makePaperTexture(): THREE.CanvasTexture {
     const canvas = document.createElement("canvas");
     canvas.width = 512;
     canvas.height = 512;
     const g = canvas.getContext("2d");
     if (!g) throw new Error("no 2d context");
-    g.fillStyle = "#f3eddb";
+
+    const warm = g.createLinearGradient(0, 0, 512, 512);
+    warm.addColorStop(0, "#f4eed9");
+    warm.addColorStop(0.5, "#f6f1e2");
+    warm.addColorStop(1, "#efe8d2");
+    g.fillStyle = warm;
     g.fillRect(0, 0, 512, 512);
-    for (let x = 0; x < 512; x += 24) {
-      for (let y = 0; y < 512; y += 24) {
-        if ((x + y) % 3 === 0) {
-          g.fillStyle = `rgba(140,120,80,${0.03 + Math.random() * 0.05})`;
-          g.fillRect(x + Math.random() * 14, y + Math.random() * 14, 2, 2);
+
+    for (let y = 0; y < 512; y += 2) {
+      for (let x = 0; x < 512; x += 2) {
+        const n = Math.random();
+        if (n < 0.03) {
+          g.fillStyle = `rgba(148,126,84,${0.02 + Math.random() * 0.05})`;
+          g.fillRect(x, y, 2, 2);
+        } else if (n < 0.05) {
+          g.fillStyle = `rgba(214,203,173,${0.5 + Math.random() * 0.3})`;
+          g.fillRect(x, y, 2, 2);
         }
       }
     }
-    g.strokeStyle = "rgba(60,55,45,0.13)";
+
+    g.strokeStyle = "rgba(96,124,196,0.22)";
     g.lineWidth = 1;
     for (let y = 32; y < 512; y += 24) {
       g.beginPath();
@@ -196,26 +237,36 @@ function buildGame(
       g.lineTo(512, y + 0.5);
       g.stroke();
     }
-    g.strokeStyle = "rgba(207,74,51,0.22)";
+    g.strokeStyle = "rgba(207,74,51,0.3)";
     g.lineWidth = 2;
     g.beginPath();
     g.moveTo(66, 0);
     g.lineTo(66, 512);
     g.stroke();
-    g.fillStyle = "rgba(49,81,194,0.14)";
+    g.fillStyle = "rgba(49,81,194,0.18)";
     g.fillRect(188, 16, 14, 14);
     g.fillRect(472, 196, 14, 14);
     g.fillRect(120, 404, 14, 14);
-    g.strokeStyle = "rgba(60,55,45,0.18)";
+    g.strokeStyle = "rgba(60,120,84,0.25)";
+    g.lineWidth = 1;
+    g.strokeRect(24, 24, 464, 464);
+    g.strokeStyle = "rgba(60,55,45,0.15)";
     g.lineWidth = 2;
     g.beginPath();
     g.arc(320, 256, 60, 0, Math.PI * 2);
     g.stroke();
+    g.strokeStyle = "rgba(60,55,45,0.1)";
+    for (let y = 320; y < 512; y += 24) {
+      g.beginPath();
+      g.moveTo(66, y);
+      g.quadraticCurveTo(180, y - 6, 300, y);
+      g.stroke();
+    }
     const tex = new THREE.CanvasTexture(canvas);
     tex.wrapS = THREE.RepeatWrapping;
     tex.wrapT = THREE.RepeatWrapping;
     tex.repeat.set(10, 44);
-    tex.anisotropy = 8;
+    tex.anisotropy = 16;
     tex.colorSpace = THREE.SRGBColorSpace;
     return tex;
   }
@@ -223,8 +274,9 @@ function buildGame(
   const groundTex = makePaperTexture();
   const groundMat = new THREE.MeshStandardMaterial({
     map: groundTex,
-    color: 0xffffff,
-    roughness: 0.95,
+    color: 0xfdfaf0,
+    roughness: 0.9,
+    metalness: 0,
   });
   const ground = new THREE.Mesh(new THREE.PlaneGeometry(80, 320), groundMat);
   ground.rotation.x = -Math.PI / 2;
@@ -268,15 +320,18 @@ function buildGame(
           const y =
             base +
             Math.abs(Math.sin(seed + i * 0.7)) * amp +
-            Math.random() * amp * 0.25;
+            Math.sin(seed * 2 + i * 2.7) * amp * 0.22 +
+            Math.random() * amp * 0.16;
           g.lineTo(x, y);
         }
         g.lineTo(1024, 256);
         g.closePath();
         g.fill();
       };
-      layer(212, "#e9e4d0", 128, 30, 1.2);
-      layer(176, "#d8dcc4", 160, 48, 4.1);
+      layer(206, "#f7efd9", 64, 26, 1.2);
+      layer(168, "#dfe6ca", 96, 44, 4.1);
+      layer(126, "#c7d4c0", 128, 62, 8.3);
+      layer(90, "#9fb6be", 144, 70, 12.7);
     }
   }
   const mountTex = new THREE.CanvasTexture(mountCanvas);
@@ -453,12 +508,42 @@ function buildGame(
     new THREE.MeshBasicMaterial({
       color: 0x000000,
       transparent: true,
-      opacity: 0.2,
+      opacity: 0.18,
     })
   );
   shadowBlob.rotation.x = -Math.PI / 2;
   shadowBlob.position.y = 0.01;
   scene.add(shadowBlob);
+
+  const poolCanvas = document.createElement("canvas");
+  poolCanvas.width = 128;
+  poolCanvas.height = 128;
+  {
+    const pg = poolCanvas.getContext("2d");
+    if (pg) {
+      const grad = pg.createRadialGradient(64, 64, 6, 64, 64, 64);
+      grad.addColorStop(0, "rgba(255,214,140,0.9)");
+      grad.addColorStop(0.45, "rgba(255,190,110,0.35)");
+      grad.addColorStop(1, "rgba(255,190,110,0)");
+      pg.fillStyle = grad;
+      pg.fillRect(0, 0, 128, 128);
+    }
+  }
+  const poolTex = new THREE.CanvasTexture(poolCanvas);
+  poolTex.colorSpace = THREE.SRGBColorSpace;
+  const lightPool = new THREE.Mesh(
+    new THREE.PlaneGeometry(5.2, 5.2),
+    new THREE.MeshBasicMaterial({
+      map: poolTex,
+      transparent: true,
+      opacity: 0.55,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    })
+  );
+  lightPool.rotation.x = -Math.PI / 2;
+  lightPool.position.y = 0.015;
+  scene.add(lightPool);
 
   const bubble = new THREE.Mesh(
     new THREE.SphereGeometry(1.15, 24, 18),
@@ -543,49 +628,67 @@ function buildGame(
 
   const boxMat = new THREE.MeshStandardMaterial({
     color: COLORS.red,
-    roughness: 0.75,
+    roughness: 0.7,
   });
   const boxMat2 = new THREE.MeshStandardMaterial({
     color: COLORS.accent2,
-    roughness: 0.75,
+    roughness: 0.7,
   });
   const boxMatInk = new THREE.MeshStandardMaterial({
     color: COLORS.ink,
-    roughness: 0.8,
+    roughness: 0.78,
   });
+  const BOX_MATS = [boxMat, boxMat2, boxMatInk];
+
+  function faceSet(base: THREE.MeshStandardMaterial): THREE.Material[] {
+    const c = base.color;
+    const mk = (mul: number, rough = 0.7) => {
+      const m = new THREE.MeshStandardMaterial({
+        color: new THREE.Color(c).multiplyScalar(mul),
+        roughness: rough,
+      });
+      base.addEventListener("dispose", () => m.dispose());
+      return m;
+    };
+    return [mk(0.9), mk(0.9), mk(1.18, 0.62), mk(0.72), mk(0.85), mk(0.85)];
+  }
+  const BOX_FACE_SETS = BOX_MATS.map(faceSet);
+  function faceSetFor(mat: THREE.Material): THREE.Material[] | THREE.Material {
+    const i = BOX_MATS.indexOf(mat as THREE.MeshStandardMaterial);
+    return i >= 0 ? BOX_FACE_SETS[i] : mat;
+  }
   const boxGeo = new THREE.BoxGeometry(1.4, 1, OB_DEPTH);
   const barGeo = new THREE.BoxGeometry(10.2, 1.15, OB_DEPTH);
   const coinMat = new THREE.MeshStandardMaterial({
-    color: COLORS.gold,
-    roughness: 0.22,
-    metalness: 0.75,
-    emissive: COLORS.goldDark,
-    emissiveIntensity: 0.25,
+    color: 0xffd54a,
+    roughness: 0.18,
+    metalness: 0.9,
+    emissive: 0xffa63d,
+    emissiveIntensity: 0.45,
   });
   const coinGeo = new THREE.CylinderGeometry(0.55, 0.55, 0.13, 22);
   const shieldMat = new THREE.MeshStandardMaterial({
     color: COLORS.accent,
-    roughness: 0.3,
+    roughness: 0.25,
     metalness: 0.5,
     emissive: COLORS.accent,
-    emissiveIntensity: 0.5,
+    emissiveIntensity: 0.7,
   });
-  const shieldGeo = new THREE.TorusGeometry(0.5, 0.11, 12, 26);
+  const shieldGeo = new THREE.TorusGeometry(0.5, 0.11, 16, 32);
   const magnetMat = new THREE.MeshStandardMaterial({
-    color: COLORS.gold,
-    roughness: 0.25,
-    metalness: 0.7,
+    color: 0xffd54a,
+    roughness: 0.22,
+    metalness: 0.85,
     emissive: COLORS.gold,
-    emissiveIntensity: 0.3,
+    emissiveIntensity: 0.45,
   });
   const magnetGeo = new THREE.SphereGeometry(0.42, 20, 16);
   const pillarGeo = new THREE.BoxGeometry(0.5, 1.05, 0.5);
 
   const pool: ObData[] = [];
-  const BOX_MATS = [boxMat, boxMat2, boxMatInk];
 
   function makeBox(lane: number, height: number, mat: THREE.Material): ObData {
-    const mesh = new THREE.Mesh(boxGeo, mat);
+    const mesh = new THREE.Mesh(boxGeo, faceSetFor(mat));
     mesh.position.set(LANE_X[lane], height / 2, -90);
     mesh.visible = false;
     mesh.castShadow = true;
@@ -613,7 +716,7 @@ function buildGame(
         ob.lane = lane;
         ob.height = height;
         ob.gaveBonus = false;
-        ob.mesh.material = mat;
+        ob.mesh.material = faceSetFor(mat);
         ob.mesh.scale.set(1, height, 1);
         ob.mesh.position.set(LANE_X[lane], height / 2, -90);
         ob.mesh.visible = true;
@@ -975,13 +1078,16 @@ function buildGame(
     if (!ob) return;
     ob.boss = true;
     ob.mesh.scale.set(7.5, 2.6, 5.5);
-    (ob.mesh.material as THREE.MeshStandardMaterial).color.setHex(
-      COLORS.red
-    );
-    (ob.mesh.material as THREE.MeshStandardMaterial).emissive.setHex(
-      COLORS.bg
-    );
-    (ob.mesh.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.55;
+    const mats = Array.isArray(ob.mesh.material)
+      ? ob.mesh.material
+      : [ob.mesh.material as THREE.MeshStandardMaterial];
+    for (const m of mats) {
+      const mat = m as THREE.MeshStandardMaterial;
+      mat.color.setHex(COLORS.red);
+      mat.emissive.setHex(0x7a2416);
+      mat.emissiveIntensity = 0.85;
+      mat.roughness = 0.4;
+    }
     ob.mesh.position.set(0, ob.height / 2, -150);
     toast("a legend stands in your way…");
   }
@@ -1164,6 +1270,8 @@ function buildGame(
     renderer.setSize(w, h);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
+    renderTarget.setSize(w, h);
+    composer.setSize(w, h);
   }
   const ro = new ResizeObserver(onResize);
   ro.observe(host);
@@ -1463,14 +1571,15 @@ function buildGame(
     glow.position.x = player.position.x;
     glow.position.z = player.position.z - 2;
     scorePos.copy(player.position);
+    lightPool.position.set(player.position.x, 0.015, player.position.z);
     shadowBlob.scale.setScalar(
       1.2 * Math.max(0.32, 1 - playerState.y / 4.2)
     );
     (shadowBlob.material as THREE.MeshBasicMaterial).opacity =
-      0.2 * (1 - playerState.y / 7);
+      0.18 * (1 - playerState.y / 7);
 
     emitHud();
-    renderer.render(scene, camera);
+    composer.render();
   }
 
   raf = requestAnimationFrame(tick);
@@ -1482,10 +1591,13 @@ function buildGame(
     ro.disconnect();
     window.clearTimeout(toastTimer);
     clock.dispose();
+    composer.dispose();
+    renderTarget.dispose();
     groundTex.dispose();
     skyTex.dispose();
     mountTex.dispose();
     sunTex.dispose();
+    poolTex.dispose();
     const disposables: (THREE.BufferGeometry | THREE.Material)[] = [];
     scene.traverse((obj) => {
       if (!(obj instanceof THREE.Mesh)) return;
