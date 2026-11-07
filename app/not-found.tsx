@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { basePath } from "@/lib/site";
 
 export default function NotFound() {
   return (
@@ -59,9 +58,6 @@ export default function NotFound() {
             </Link>
           </div>
 
-          <p className="mt-8 border-t-2 border-dashed border-borderish pt-4 font-mono text-xs text-faint">
-            {basePath}
-          </p>
         </div>
       </div>
     </div>

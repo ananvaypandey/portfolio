@@ -4,7 +4,7 @@ import "./globals.css";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import ApplyFloat from "@/components/ApplyFloat";
-import { site } from "@/lib/site";
+import { site, siteOrigin } from "@/lib/site";
 
 const patrickHand = Patrick_Hand({
   variable: "--font-patrick",
@@ -23,7 +23,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://ananvaypandey.github.io/portfolio"),
+  metadataBase: new URL(siteOrigin),
   title: `${site.name} — ${site.role}`,
   description: site.tagline,
   openGraph: {

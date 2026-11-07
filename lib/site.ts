@@ -1,4 +1,5 @@
-export const basePath = "/portfolio";
+export const siteOrigin = "https://ananvay.is-a.dev";
+export const basePath = "";
 
 export const site = {
   name: "Ananvay Pandey",

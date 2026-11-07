@@ -1,12 +1,12 @@
 import type { MetadataRoute } from "next";
-import { navLinks } from "@/lib/site";
+import { navLinks, siteOrigin } from "@/lib/site";
 import { getAllSlugs } from "@/lib/posts";
 import projects from "@/components/projectData";
 
 export const dynamic = "force-static";
 
-const ORIGIN = "https://ananvaypandey.github.io";
-const BASE = "/portfolio";
+const ORIGIN = siteOrigin;
+const BASE = "";
 
 const pages = [...navLinks.map((l) => l.href), "/join"];
 
