@@ -26,12 +26,18 @@ type Hud = {
 };
 
 interface ObData {
-  mesh: THREE.Mesh;
+  mesh: THREE.Object3D;
   lane: number;
   height: number;
   depth: number;
   active: boolean;
   kind: "box" | "bar" | "coin" | "power";
+  prop?: string;
+  roll?: boolean;
+  sway?: number;
+  freq?: number;
+  phase?: number;
+  range?: number;
   variant?: "shield" | "magnet" | "x2";
   gaveBonus: boolean;
   boss?: boolean;
@@ -858,20 +864,152 @@ function buildGame(
     }
   }
 
-  const boxMat = new THREE.MeshStandardMaterial({
+  // ---- obstacle props (real objects, not blocks) ----
+  function makePlankTex() {
+    const c = document.createElement("canvas");
+    c.width = 256;
+    c.height = 256;
+    const g = c.getContext("2d");
+    if (!g) throw new Error("no 2d context");
+    g.fillStyle = "#a9854f";
+    g.fillRect(0, 0, 256, 256);
+    for (let y = 0; y < 256; y += 42) {
+      g.fillStyle =
+        (y / 42) % 2 ? "rgba(94,70,38,0.35)" : "rgba(214,180,120,0.25)";
+      g.fillRect(0, y, 256, 42);
+      g.strokeStyle = "rgba(70,50,25,0.5)";
+      g.lineWidth = 2;
+      g.beginPath();
+      g.moveTo(0, y + 41);
+      g.lineTo(256, y + 41);
+      g.stroke();
+    }
+    for (let i = 0; i < 90; i++) {
+      g.strokeStyle = `rgba(60,42,20,${0.08 + Math.random() * 0.14})`;
+      g.lineWidth = 1;
+      g.beginPath();
+      g.moveTo(Math.random() * 256, Math.random() * 256);
+      g.lineTo(Math.random() * 256, Math.random() * 256);
+      g.stroke();
+    }
+    const t = new THREE.CanvasTexture(c);
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.anisotropy = 4;
+    t.colorSpace = THREE.SRGBColorSpace;
+    return t;
+  }
+  function hazardTex() {
+    const c = document.createElement("canvas");
+    c.width = 64;
+    c.height = 64;
+    const g = c.getContext("2d");
+    if (!g) throw new Error("no 2d context");
+    g.fillStyle = "#f2c14e";
+    g.fillRect(0, 0, 64, 64);
+    g.fillStyle = "#211f1a";
+    for (let i = -2; i < 6; i++) {
+      g.save();
+      g.translate(0, 32);
+      g.rotate(Math.PI / 4);
+      g.translate(0, i * 26);
+      g.fillRect(-46, 0, 92, 12);
+      g.restore();
+    }
+    const t = new THREE.CanvasTexture(c);
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.colorSpace = THREE.SRGBColorSpace;
+    return t;
+  }
+  function bossSignTex() {
+    const c = document.createElement("canvas");
+    c.width = 512;
+    c.height = 128;
+    const g = c.getContext("2d");
+    if (!g) throw new Error("no 2d context");
+    g.clearRect(0, 0, 512, 128);
+    g.font = "900 54px Georgia, serif";
+    g.textAlign = "center";
+    g.textBaseline = "middle";
+    g.fillStyle = "#211f1a";
+    g.fillText("ANANVAY PANDEY", 256, 42);
+    g.fillStyle = "#cf4a33";
+    g.font = "900 34px Georgia, serif";
+    g.fillText("\u221E", 256, 100);
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    return t;
+  }
+  const plankTex = makePlankTex();
+  const woodMat = new THREE.MeshStandardMaterial({
+    map: plankTex,
+    roughness: 0.85,
+  });
+  const woodDark = new THREE.MeshStandardMaterial({
+    color: 0x6e4f2c,
+    roughness: 0.9,
+  });
+  const barrelMat = new THREE.MeshStandardMaterial({
     color: COLORS.red,
-    roughness: 0.75,
+    roughness: 0.5,
+    metalness: 0.3,
   });
-  const boxMat2 = new THREE.MeshStandardMaterial({
-    color: COLORS.accent2,
-    roughness: 0.75,
+  const barrelBandMat = new THREE.MeshStandardMaterial({
+    color: 0xf0e9d8,
+    roughness: 0.6,
   });
-  const boxMatInk = new THREE.MeshStandardMaterial({
-    color: COLORS.ink,
-    roughness: 0.8,
+  const barrelLidMat = new THREE.MeshStandardMaterial({
+    color: 0x8b8577,
+    roughness: 0.7,
   });
-  const boxGeo = new THREE.BoxGeometry(1.4, 1, OB_DEPTH);
-  const barGeo = new THREE.BoxGeometry(10.2, 1.15, OB_DEPTH);
+  const obstacleConeMat = new THREE.MeshStandardMaterial({
+    color: COLORS.red,
+    roughness: 0.5,
+  });
+  const obstacleConeBandMat = new THREE.MeshStandardMaterial({
+    color: 0xf6f1e3,
+    roughness: 0.5,
+  });
+  const trashMat = new THREE.MeshStandardMaterial({
+    color: 0x46706b,
+    roughness: 0.7,
+  });
+  const hazardMat = new THREE.MeshStandardMaterial({
+    map: hazardTex(),
+    roughness: 0.7,
+  });
+  const logWoodMat = new THREE.MeshStandardMaterial({
+    color: 0x8a6a45,
+    roughness: 0.9,
+  });
+  const obLogEndMat = new THREE.MeshStandardMaterial({
+    color: 0xe0c58f,
+    roughness: 0.9,
+  });
+  const bossBoardMat = new THREE.MeshStandardMaterial({
+    color: COLORS.red,
+    roughness: 0.55,
+    emissive: COLORS.bg,
+    emissiveIntensity: 0.55,
+  });
+  const bossSignMat = new THREE.MeshBasicMaterial({
+    map: bossSignTex(),
+    transparent: true,
+    depthWrite: false,
+  });
+
+  const crateGeo = new THREE.BoxGeometry(1.35, 1.5, 1.35);
+  const slatGeo = new THREE.BoxGeometry(1.42, 0.16, 0.08);
+  const barrelGeo = new THREE.CylinderGeometry(0.45, 0.45, 1.34, 16);
+  const barrelBandGeo = new THREE.CylinderGeometry(0.49, 0.49, 0.16, 16);
+  const barrelLidGeo = new THREE.CylinderGeometry(0.26, 0.46, 0.12, 16);
+  const coneGeo = new THREE.ConeGeometry(0.5, 1.05, 14);
+  const coneBandGeo = new THREE.BoxGeometry(0.82, 0.16, 0.82);
+  const coneBaseGeo = new THREE.CylinderGeometry(0.62, 0.62, 0.16, 14);
+  const trashGeo = new THREE.CylinderGeometry(0.42, 0.38, 1.05, 14);
+  const lidGeo = new THREE.CylinderGeometry(0.52, 0.56, 0.1, 14);
+  const logRollGeo = new THREE.CylinderGeometry(0.55, 0.55, 10.4, 14);
+  const barBoardGeo = new THREE.BoxGeometry(10.2, 0.3, 0.26);
+  const barLegGeo = new THREE.BoxGeometry(0.5, 1.2, 0.5);
   const coinMat = new THREE.MeshStandardMaterial({
     color: COLORS.gold,
     roughness: 0.22,
@@ -899,75 +1037,298 @@ function buildGame(
   const pillarGeo = new THREE.BoxGeometry(0.5, 1.05, 0.5);
 
   const pool: ObData[] = [];
-  const BOX_MATS = [boxMat, boxMat2, boxMatInk];
 
-  function makeBox(lane: number, height: number, mat: THREE.Material): ObData {
-    const mesh = new THREE.Mesh(boxGeo, mat);
-    mesh.position.set(LANE_X[lane], height / 2, -90);
-    mesh.visible = false;
-    mesh.castShadow = true;
-    scene.add(mesh);
+  function buildCrate(): THREE.Group {
+    const grp = new THREE.Group();
+    const main = new THREE.Mesh(crateGeo, woodMat);
+    main.castShadow = true;
+    grp.add(main);
+    const f = new THREE.Mesh(slatGeo, woodDark);
+    f.position.set(0, 0.25, 0.7);
+    f.rotation.z = 0.62;
+    grp.add(f);
+    const f2 = new THREE.Mesh(slatGeo, woodDark);
+    f2.position.set(0, 0.95, 0.7);
+    f2.rotation.z = -0.62;
+    grp.add(f2);
+    const sl = new THREE.Mesh(slatGeo, woodDark);
+    sl.position.set(-0.66, 0.6, 0);
+    sl.rotation.z = Math.PI / 2;
+    grp.add(sl);
+    const sr = sl.clone();
+    sr.position.x = 0.66;
+    grp.add(sr);
+    grp.userData.roll = false;
+    return grp;
+  }
+  function buildBarrel(): THREE.Group {
+    const grp = new THREE.Group();
+    const body = new THREE.Mesh(barrelGeo, barrelMat);
+    body.position.y = 0.67;
+    body.castShadow = true;
+    grp.add(body);
+    const band = new THREE.Mesh(barrelBandGeo, barrelBandMat);
+    band.position.y = 0.82;
+    grp.add(band);
+    const lid = new THREE.Mesh(barrelLidGeo, barrelLidMat);
+    lid.position.y = 1.36;
+    grp.add(lid);
+    grp.userData.roll = true;
+    return grp;
+  }
+  function buildCrateStack(): THREE.Group {
+    const grp = new THREE.Group();
+    const a = buildCrate();
+    grp.add(a);
+    const b = buildCrate();
+    b.position.y = 1.5;
+    grp.add(b);
+    grp.userData.roll = false;
+    return grp;
+  }
+  function buildBarrelStack(): THREE.Group {
+    const grp = new THREE.Group();
+    const a = buildBarrel();
+    grp.add(a);
+    const b = buildBarrel();
+    b.position.y = 1.42;
+    grp.add(b);
+    grp.userData.roll = true;
+    return grp;
+  }
+  function buildCone(): THREE.Group {
+    const grp = new THREE.Group();
+    const body = new THREE.Mesh(coneGeo, obstacleConeMat);
+    body.position.y = 0.56;
+    body.castShadow = true;
+    grp.add(body);
+    const band = new THREE.Mesh(coneBandGeo, obstacleConeBandMat);
+    band.position.y = 0.72;
+    grp.add(band);
+    const base = new THREE.Mesh(coneBaseGeo, obstacleConeMat);
+    base.position.y = 0.08;
+    grp.add(base);
+    grp.userData.roll = false;
+    return grp;
+  }
+  function buildTrash(): THREE.Group {
+    const grp = new THREE.Group();
+    const body = new THREE.Mesh(trashGeo, trashMat);
+    body.position.y = 0.52;
+    body.castShadow = true;
+    grp.add(body);
+    const lid = new THREE.Mesh(lidGeo, trashMat);
+    lid.position.y = 1.12;
+    grp.add(lid);
+    const handMat = new THREE.MeshStandardMaterial({ color: 0x354d49, roughness: 0.6 });
+    for (const sx of [-0.2, 0.2]) {
+      const h = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.34, 0.1), handMat);
+      h.position.set(sx, 0.6, 0.42);
+      grp.add(h);
+    }
+    grp.userData.roll = false;
+    return grp;
+  }
+  function buildObstacleCar(): THREE.Group {
+    const grp = makeCar();
+    grp.userData.roll = false;
+    return grp;
+  }
+  function buildBarrier(): THREE.Group {
+    const grp = new THREE.Group();
+    const board = new THREE.Mesh(barBoardGeo, hazardMat);
+    board.position.y = 1.08;
+    board.castShadow = true;
+    board.receiveShadow = true;
+    grp.add(board);
+    for (const sx of [-4.7, 4.7]) {
+      const leg = new THREE.Mesh(barLegGeo, woodDark);
+      leg.position.set(sx, 0.6, 0);
+      const kicker = new THREE.Mesh(
+        new THREE.BoxGeometry(1.4, 0.12, 0.12),
+        woodDark
+      );
+      kicker.position.set(sx + 0.9, 0.06, 0);
+      kicker.rotation.z = 0.12;
+      grp.add(leg, kicker);
+    }
+    grp.userData.roll = false;
+    return grp;
+  }
+  function buildLog(): THREE.Group {
+    const grp = new THREE.Group();
+    const main = new THREE.Mesh(logRollGeo, logWoodMat);
+    main.rotation.z = Math.PI / 2;
+    main.position.y = 0.5;
+    main.castShadow = true;
+    grp.add(main);
+    const ringGeo = new THREE.CircleGeometry(0.55, 12);
+    const eL = new THREE.Mesh(ringGeo, obLogEndMat);
+    eL.rotation.y = Math.PI / 2;
+    eL.position.set(-5.2, 0.5, 0);
+    const eR = eL.clone();
+    eR.position.x = 5.2;
+    grp.add(eL, eR);
+    grp.userData.roll = false;
+    return grp;
+  }
+  function buildBoss(): THREE.Group {
+    const grp = new THREE.Group();
+    const board = new THREE.Mesh(new THREE.BoxGeometry(7.4, 2.3, 0.8), bossBoardMat);
+    board.position.y = 1.6;
+    board.castShadow = true;
+    grp.add(board);
+    const sign = new THREE.Mesh(new THREE.PlaneGeometry(6.8, 1.7), bossSignMat);
+    sign.position.set(0, 1.6, 0.41);
+    grp.add(sign);
+    const postMat = new THREE.MeshStandardMaterial({
+      color: COLORS.ink,
+      roughness: 0.8,
+    });
+    for (const sx of [-3.5, 3.5]) {
+      const post = new THREE.Mesh(new THREE.BoxGeometry(0.55, 3, 0.55), postMat);
+      post.position.set(sx, 1.5, 0);
+      grp.add(post);
+    }
+    grp.userData.roll = false;
+    return grp;
+  }
+
+  const SINGLE_PROPS = ["crate", "barrel", "crateStack", "barrelStack", "cone", "trash", "car"];
+  function singlePropHeight(kind: string) {
+    return kind === "crateStack" ? 3 : kind === "barrelStack" ? 2.84 : kind === "crate" ? 1.5 : kind === "barrel" ? 1.42 : kind === "cone" ? 1.15 : kind === "trash" ? 1.15 : 1.2;
+  }
+  function buildSingleProp(kind: string): THREE.Group {
+    switch (kind) {
+      case "crate": return buildCrate();
+      case "barrel": return buildBarrel();
+      case "crateStack": return buildCrateStack();
+      case "barrelStack": return buildBarrelStack();
+      case "cone": return buildCone();
+      case "trash": return buildTrash();
+      default: return buildObstacleCar();
+    }
+  }
+  function makeProp(kind: string): ObData {
+    const grp = buildSingleProp(kind);
+    grp.visible = false;
+    scene.add(grp);
     const ob: ObData = {
-      mesh,
-      lane,
-      height,
+      mesh: grp,
+      lane: 1,
+      height: singlePropHeight(kind),
       depth: OB_DEPTH,
       active: false,
       kind: "box",
+      prop: kind,
+      roll: !!grp.userData.roll,
       gaveBonus: false,
     };
     pool.push(ob);
     return ob;
   }
-  function takeBox(
-    lane: number,
-    height: number,
-    mat: THREE.Material
-  ): ObData {
+
+  function takeProp(lane: number): ObData {
     for (const ob of pool) {
       if (!ob.active && ob.kind === "box") {
         ob.active = true;
         ob.lane = lane;
-        ob.height = height;
         ob.gaveBonus = false;
-        ob.mesh.material = mat;
-        ob.mesh.scale.set(1, height, 1);
-        ob.mesh.position.set(LANE_X[lane], height / 2, -90);
+        ob.sway = Math.random() < 0.65 ? 0.5 + Math.random() * 0.9 : 0;
+        ob.range = ob.sway ? 0.7 + Math.random() * 0.7 : 0;
+        ob.freq = 0.5 + Math.random() * 0.9;
+        ob.phase = Math.random() * Math.PI * 2;
+        ob.mesh.rotation.set(0, 0, 0);
+        ob.mesh.position.set(LANE_X[lane], 0, -90);
         ob.mesh.visible = true;
         return ob;
       }
     }
-    return makeBox(lane, height, mat);
+    const kind =
+      SINGLE_PROPS[Math.floor(Math.random() * SINGLE_PROPS.length)];
+    const made = makeProp(kind);
+    made.active = true;
+    made.lane = lane;
+    made.sway = Math.random() < 0.65 ? 0.5 + Math.random() * 0.9 : 0;
+    made.range = made.sway ? 0.7 + Math.random() * 0.7 : 0;
+    made.freq = 0.5 + Math.random() * 0.9;
+    made.phase = Math.random() * Math.PI * 2;
+    made.mesh.position.set(LANE_X[lane], 0, -90);
+    made.mesh.visible = true;
+    return made;
   }
-  function takeBar(): ObData {
-    for (const ob of pool) {
-      if (!ob.active && ob.kind === "bar") {
-        ob.active = true;
-        ob.lane = -1;
-        ob.gaveBonus = false;
-        ob.mesh.position.z = -90;
-        ob.mesh.visible = true;
-        return ob;
-      }
-    }
-    const mesh = new THREE.Mesh(
-      barGeo,
-      Math.random() < 0.5 ? boxMat : boxMat2
-    );
-    mesh.position.set(0, 1.15 / 2, -90);
-    mesh.visible = false;
-    mesh.castShadow = true;
-    scene.add(mesh);
+
+  const BAR_PROPS = ["barrier", "log"];
+  const barPool: ObData[] = [];
+  function makeBarrierProp(kind: string): ObData {
+    const grp = kind === "log" ? buildLog() : buildBarrier();
+    grp.visible = false;
+    scene.add(grp);
     const ob: ObData = {
-      mesh,
+      mesh: grp,
       lane: -1,
-      height: 1.15,
+      height: kind === "log" ? 0.8 : 1.25,
       depth: OB_DEPTH,
       active: false,
       kind: "bar",
+      prop: kind,
+      roll: false,
       gaveBonus: false,
     };
-    pool.push(ob);
+    barPool.push(ob);
+    return ob;
+  }
+  function takeBarrier(): ObData {
+    for (const ob of barPool) {
+      if (!ob.active && !ob.boss) {
+        ob.active = true;
+        ob.lane = -1;
+        ob.gaveBonus = false;
+        ob.mesh.rotation.set(0, 0, 0);
+        ob.mesh.position.set(0, 0, -90);
+        ob.mesh.visible = true;
+        return ob;
+      }
+    }
+    const kind = BAR_PROPS[Math.floor(Math.random() * BAR_PROPS.length)];
+    const made = makeBarrierProp(kind);
+    made.active = true;
+    made.mesh.position.set(0, 0, -90);
+    made.mesh.visible = true;
+    return made;
+  }
+
+  const bossPool: ObData[] = [];
+  function takeBossProp(): ObData {
+    for (const ob of bossPool) {
+      if (!ob.active) {
+        ob.active = true;
+        ob.gaveBonus = false;
+        ob.mesh.rotation.set(0, 0, 0);
+        ob.mesh.position.set(0, 0, -150);
+        ob.mesh.visible = true;
+        return ob;
+      }
+    }
+    const grp = buildBoss();
+    grp.visible = false;
+    scene.add(grp);
+    const ob: ObData = {
+      mesh: grp,
+      lane: -1,
+      height: 2.7,
+      depth: OB_DEPTH,
+      active: false,
+      kind: "bar",
+      prop: "boss",
+      roll: false,
+      gaveBonus: false,
+      boss: true,
+    };
+    bossPool.push(ob);
+    ob.active = true;
+    ob.mesh.position.set(0, 0, -150);
+    ob.mesh.visible = true;
     return ob;
   }
   function takeCoin(lane: number, y: number): ObData {
@@ -1206,7 +1567,10 @@ function buildGame(
     playerState.run = 0;
     playerState.blink = 0;
     playerState.dying = false;
+    bossSpawned = false;
     for (const ob of pool) recycle(ob);
+    for (const ob of barPool) recycle(ob);
+    for (const ob of bossPool) recycle(ob);
     bubble.visible = false;
     player.position.set(0, 0.8, 0);
     player.rotation.set(0, 0, 0);
@@ -1288,18 +1652,8 @@ function buildGame(
 
   function takeBoss() {
     bossSpawned = true;
-    const ob = takeBar() ?? takeBox(1, 1.2, BOX_MATS[0]);
+    const ob = takeBossProp();
     if (!ob) return;
-    ob.boss = true;
-    ob.mesh.scale.set(7.5, 2.6, 5.5);
-    (ob.mesh.material as THREE.MeshStandardMaterial).color.setHex(
-      COLORS.red
-    );
-    (ob.mesh.material as THREE.MeshStandardMaterial).emissive.setHex(
-      COLORS.bg
-    );
-    (ob.mesh.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.55;
-    ob.mesh.position.set(0, ob.height / 2, -150);
     toast("a legend stands in your way…");
   }
 
@@ -1346,25 +1700,18 @@ function buildGame(
         const coin = takeCoin(lane, 2.0);
         if (coin) coin.mesh.position.z = -90 + i * 6;
       }
-    } else if (r < 0.31) {
-      const bar = takeBar();
-      if (bar) (bar.mesh.material as THREE.MeshStandardMaterial).color.setHex(
-        Math.random() < 0.5 ? COLORS.red : COLORS.accent2
-      );
-    } else if (r < 0.61) {
-      const lane = Math.floor(Math.random() * 3);
-      const tall = Math.random() < 0.42;
-      const mat = BOX_MATS[Math.floor(Math.random() * BOX_MATS.length)];
-      takeBox(lane, tall ? 2.75 : 1.4, mat);
-    } else if (r < 0.85) {
+    } else if (r < 0.30) {
+      takeBarrier();
+    } else if (r < 0.60) {
+      takeProp(Math.floor(Math.random() * 3));
+    } else if (r < 0.84) {
       const lanes = Math.random() < 0.5 ? [0, 1] : [1, 2];
-      const tall = Math.random() < 0.42;
-      takeBox(lanes[0], tall ? 2.75 : 1.4, BOX_MATS[0]);
-      takeBox(lanes[1], tall ? 2.75 : 1.4, BOX_MATS[1]);
+      takeProp(lanes[0]);
+      takeProp(lanes[1]);
     } else {
       const lanes = Math.random() < 0.5 ? [0, 2] : [0, 1];
-      takeBox(lanes[0], 1.6, Math.random() < 0.5 ? BOX_MATS[0] : BOX_MATS[2]);
-      takeBox(lanes[1], 1.6, Math.random() < 0.5 ? BOX_MATS[1] : BOX_MATS[0]);
+      takeProp(lanes[0]);
+      takeProp(lanes[1]);
     }
   }
 
@@ -1608,7 +1955,7 @@ function buildGame(
       const centerY = playerState.y + 0.8;
       const multNow = combo * (x2T > 0 ? 2 : 1);
 
-      for (const ob of pool) {
+for (const ob of pool.concat(barPool, bossPool)) {
         if (!ob.active) continue;
         if (ob.kind === "coin") {
           const cx = LANE_X[ob.lane];
@@ -1682,10 +2029,27 @@ function buildGame(
 
         ob.mesh.position.z += speed * dt;
         const obPz = ob.mesh.position.z;
+        if (ob.kind === "bar") {
+          ob.mesh.position.x = 0;
+        } else {
+          if (ob.sway) {
+            ob.mesh.position.x =
+              LANE_X[ob.lane] +
+              Math.sin(t * (ob.freq ?? 0) + (ob.phase ?? 0)) * (ob.range ?? 0);
+          } else {
+            ob.mesh.position.x = LANE_X[ob.lane];
+          }
+          if (ob.roll && ob.prop === "barrel") {
+            ob.mesh.rotation.x += speed * dt * 2.4;
+          } else {
+            ob.mesh.rotation.z =
+              Math.sin(t * 2.2 + (ob.phase ?? 0)) * 0.08;
+          }
+        }
         const dx =
           ob.kind === "bar"
             ? 0.4
-            : Math.abs(playerState.x - LANE_X[ob.lane]);
+            : Math.abs(playerState.x - ob.mesh.position.x);
         const dz = Math.abs(obPz);
         if (dz < ob.depth / 2 + PLAYER_HALF && dx < 1.05 && feetY < ob.height) {
           hit(ob);
